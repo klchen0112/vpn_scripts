@@ -1,0 +1,19 @@
+proxies:
+    - {
+          name: "香港",
+          type: trojan,
+          server: "",
+          port: "",
+          password: "",
+          udp: "",
+          sni: "",
+      }
+    - {
+          name: "香港",
+          type: trojan,
+          server: "",
+          port: "",
+          password: "",
+          udp: "",
+          sni: "",
+      }
