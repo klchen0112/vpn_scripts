@@ -1,6 +1,15 @@
 import yaml
 import json
 import copy
+import argparse
+
+parser = argparse.ArgumentParser(description="")
+
+parser.add_argument("-z", "--zju", help="wether use zju", action="store_true")
+
+args = parser.parse_args()
+
+use_zju = args.zju
 
 
 url_test_base = {
@@ -25,7 +34,7 @@ server_base = {
     },
 }
 
-place_list = [
+place_back = [
     "香港",
     "美国",
     "台湾",
@@ -45,11 +54,11 @@ place_list = [
     "印度",
 ]
 
-bitz_json = {
+result_json = {
     "log": {
         "disabled": False,
         "level": "warn",
-        "output": "box.log",
+        # "output": "box.log",
         "timestamp": True,
     },
     "dns": {
@@ -60,11 +69,19 @@ bitz_json = {
                 "address": "https://223.5.5.5/dns-query",
                 "detour": "direct",
             },
-            {
-                "tag": "zjuDns",
-                "address": "10.10.0.21",
-                "detour": "direct",
-            },
+        ]
+        + (
+            []
+            if not use_zju
+            else [
+                {
+                    "tag": "zjuDns",
+                    "address": "10.10.0.21",
+                    "detour": "direct",
+                },
+            ]
+        )
+        + [
             {"tag": "block", "address": "rcode://success"},
             {"tag": "remote", "address": "fakeip", "detour": "proxy"},
         ],
@@ -76,92 +93,101 @@ bitz_json = {
                 "disable_cache": True,
             },
             {"outbound": "any", "server": "localDns", "disable_cache": True},
-            {
-                "domain_suffix": [
-                    "zju.edu.cn"
-                    "cc98.org"
-                    "nexushd.org"
-                    "icsr.wiki"
-                    "zjusec.com"
-                    "zjusec.net"
-                    "zjusec.top"
-                    "zjusct.io"
-                    "zjueva.net"
-                    "zjuqsc.com"
-                    "worldcup.myth.cx"
-                    "illinois.edu"
-                    "acm.org"
-                    "cnki.net"
-                    "gtadata.com"
-                    "jstor.org"
-                    "webofscience.com"
-                    "inoteexpress.com"
-                    "pnas.org"
-                    "cnpereading.com"
-                    "sciencemag.org"
-                    "cas.org"
-                    "webofknowledge.com"
-                    "pkulaw.com"
-                    "sslibrary.com"
-                    "serialssolutions.com"
-                    "duxiu.com"
-                    "wanfangdata.com.cn"
-                    "koolearn.com"
-                    "cssci.nju.edu.cn"
-                    "science.org"
-                    "oup.com"
-                    "ajtmh.org"
-                    "futuremedicine.com"
-                    "tandfonline.com"
-                    "genetics.org"
-                    "healthaffairs.org"
-                    "rsna.org"
-                    "iospress.com"
-                    "allenpress.com"
-                    "asabe.org"
-                    "geoscienceworld.org"
-                    "sagepub.com"
-                    "ajnr.org"
-                    "ajhp.org"
-                    "annals.org"
-                    "esajournals.org"
-                    "informs.org"
-                    "cshlpress.com"
-                    "nrcresearchpress.cn"
-                    "royalsocietypublishing.org"
-                    "oxfordjournals.org"
-                    "aspbjournals.org"
-                    "sciencesocieties.org"
-                    "degruyter.com"
-                    "cshprotocols.org"
-                    "liebertonline.com"
-                    "polymerjournals.com"
-                    "csiro.au"
-                    "iop.org"
-                    "electrochem.org"
-                    "ametsoc.org"
-                    "portlandpress.com"
-                    "nrcresearchpress.com"
-                    "arabidopsis.org"
-                    "springerlink.com"
-                    "highwire.org"
-                    "ovid.com"
-                    "rsc.org"
-                    "bmj.org"
-                    "aip.org"
-                    "springer.com"
-                    "iwaponline.com"
-                    "rsnajnls.org"
-                    "karger.com"
-                    "wiley.com"
-                    "plantcell.org"
-                    "jamanetwork.com"
-                    "nejm.org"
-                ],
-                "server": "zjuDns",
-            },
-            {"geosite": ["cn", "private"], "server": "localDns"},
-            {"clash_mode": "direct", "server": "localDnsDns"},
+        ]
+        + (
+            []
+            if not use_zju
+            else [
+                {
+                    "domain_suffix": [
+                        "zju.edu.cn",
+                        "cc98.org",
+                        "nexushd.org",
+                        "icsr.wiki",
+                        "zjusec.com",
+                        "zjusec.net",
+                        "zjusec.top",
+                        "zjusct.io",
+                        "zjueva.net",
+                        "zjuqsc.com",
+                        "worldcup.myth.cx",
+                        "illinois.edu",
+                        "acm.org",
+                        "cnki.net",
+                        "gtadata.com",
+                        "jstor.org",
+                        "webofscience.com",
+                        "inoteexpress.com",
+                        "pnas.org",
+                        "cnpereading.com",
+                        "sciencemag.org",
+                        "cas.org",
+                        "webofknowledge.com",
+                        "pkulaw.com",
+                        "sslibrary.com",
+                        "serialssolutions.com",
+                        "duxiu.com",
+                        "wanfangdata.com.cn",
+                        "koolearn.com",
+                        "cssci.nju.edu.cn",
+                        "science.org",
+                        "oup.com",
+                        "ajtmh.org",
+                        "futuremedicine.com",
+                        "tandfonline.com",
+                        "genetics.org",
+                        "healthaffairs.org",
+                        "rsna.org",
+                        "iospress.com",
+                        "allenpress.com",
+                        "asabe.org",
+                        "geoscienceworld.org",
+                        "sagepub.com",
+                        "ajnr.org",
+                        "ajhp.org",
+                        "annals.org",
+                        "esajournals.org",
+                        "informs.org",
+                        "cshlpress.com",
+                        "nrcresearchpress.cn",
+                        "royalsocietypublishing.org",
+                        "oxfordjournals.org",
+                        "aspbjournals.org",
+                        "sciencesocieties.org",
+                        "degruyter.com",
+                        "cshprotocols.org",
+                        "liebertonline.com",
+                        "polymerjournals.com",
+                        "csiro.au",
+                        "iop.org",
+                        "electrochem.org",
+                        "ametsoc.org",
+                        "portlandpress.com",
+                        "nrcresearchpress.com",
+                        "arabidopsis.org",
+                        "springerlink.com",
+                        "highwire.org",
+                        "ovid.com",
+                        "rsc.org",
+                        "bmj.org",
+                        "aip.org",
+                        "springer.com",
+                        "iwaponline.com",
+                        "rsnajnls.org",
+                        "karger.com",
+                        "wiley.com",
+                        "plantcell.org",
+                        "jamanetwork.com",
+                        "nejm.org",
+                        "icevirtuallibrary.com",
+                    ],
+                    "server": "zjuDns",
+                },
+            ]
+        )
+        + [
+            {"geosite": ["cn", "private","category-games@cn"], "server": "localDns"},
+            {"clash_mode": "direct", "server": "localDns"},
             {"clash_mode": "global", "server": "proxyDns"},
             {"geosite": "geolocation-!cn", "server": "proxyDns"},
             {"query_type": ["A", "AAAA"], "server": "remote"},
@@ -188,17 +214,15 @@ bitz_json = {
                 "http_proxy": {
                     "enabled": True,
                     "server": "127.0.0.1",
-                    "server_port": 2080,
+                    "server_port": 7890,
                 }
             },
         },
         {
             "type": "mixed",
             "listen": "127.0.0.1",
-            "listen_port": 2080,
+            "listen_port": 7890,
             "sniff": True,
-            "sniff_override_destination": False,
-            "domain_strategy": "ipv4_only",
         },
     ],
     "outbounds": [
@@ -208,23 +232,29 @@ bitz_json = {
             "outbounds": ["auto", "地区选择", "节点选择", "direct"],
         },
         {
-            "type": "urltest",
-            "tag": "auto",
-            "outbounds": copy.deepcopy(place_list),
-            "url": "https://www.gstatic.com/generate_204",
-            "interval": "1m",
-            "tolerance": 50,
+            "tag": "广告过滤",
+            "type": "selector",
+            "outbounds": ["block", "direct"],
         },
         {
-            "tag": "地区选择",
+            "tag": "学术",
             "type": "selector",
-            "outbounds": copy.deepcopy(place_list),
+            "outbounds": ["proxy", "节点选择", "direct"],
         },
         {
             "tag": "OpenAI",
             "type": "selector",
             "outbounds": [
                 "美国",
+                "proxy",
+            ],
+        },
+        {
+            "tag": "Developer",
+            "type": "selector",
+            "outbounds": [
+                "proxy",
+                "direct",
             ],
         },
         {
@@ -261,15 +291,6 @@ bitz_json = {
             ],
         },
         {
-            "tag": "哔哩东南亚",
-            "type": "selector",
-            "outbounds": [
-                "香港",
-                "台湾",
-                "proxy",
-            ],
-        },
-        {
             "tag": "巴哈姆特",
             "type": "selector",
             "outbounds": [
@@ -277,11 +298,6 @@ bitz_json = {
                 "香港",
                 "proxy",
             ],
-        },
-        {
-            "tag": "动画疯",
-            "type": "selector",
-            "outbounds": ["台湾", "direct"],
         },
         {
             "tag": "Apple",
@@ -313,115 +329,153 @@ bitz_json = {
             "outbounds": ["proxy", "direct"],
         },
         {"tag": "Speedtest", "type": "selector", "outbounds": ["direct", "proxy"]},
+        {"tag": "not cn", "type": "selector", "outbounds": ["proxy", "direct"]},
         {"type": "direct", "tag": "direct"},
-        {"type": "dns", "tag": "dns"},
+        {"type": "dns", "tag": "dns-out"},
         {"type": "block", "tag": "block"},
     ],
     "route": {
         "auto_detect_interface": True,
         "final": "proxy",
         "geoip": {
-            "download_url": "https://ghproxy.com/github.com/SagerNet/sing-geoip/releases/latest/download/geoip.db",
+            "download_url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geoip.db",
             "download_detour": "direct",
         },
         "geosite": {
-            "download_url": "https://ghproxy.com/github.com/SagerNet/sing-geosite/releases/latest/download/geosite.db",
+            "download_url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geosite.db",
             "download_detour": "direct",
         },
         "rules": [
-            {"protocol": "dns", "outbound": "dns"},
+            {"protocol": "dns", "outbound": "dns-out"},
             {"network": "udp", "port": 443, "outbound": "block"},
-            {"geosite": "category-ads-all", "outbound": "block"},
+            {"geosite": "category-ads-all", "outbound": "广告过滤"},
             {"clash_mode": "direct", "outbound": "direct"},
             {"clash_mode": "global", "outbound": "proxy"},
             {
-                "domain": ["clash.razord.top", "yacd.metacubex.one", "yacd.haishan.me"],
-                "outbound": "direct",
-            },
-            {
-                "ip_cidr": ["10.0.0.0/8"],
                 "domain": [
-                    "zju.edu.cn"
-                    "cc98.org"
-                    "nexushd.org"
-                    "icsr.wiki"
-                    "zjusec.com"
-                    "zjusec.net"
-                    "zjusec.top"
-                    "zjusct.io"
-                    "zjueva.net"
-                    "zjuqsc.com"
-                    "worldcup.myth.cx"
-                    "illinois.edu"
-                    "acm.org"
-                    "cnki.net"
-                    "gtadata.com"
-                    "jstor.org"
-                    "webofscience.com"
-                    "inoteexpress.com"
-                    "pnas.org"
-                    "cnpereading.com"
-                    "sciencemag.org"
-                    "cas.org"
-                    "webofknowledge.com"
-                    "pkulaw.com"
-                    "sslibrary.com"
-                    "serialssolutions.com"
-                    "duxiu.com"
-                    "wanfangdata.com.cn"
-                    "koolearn.com"
-                    "cssci.nju.edu.cn"
-                    "science.org"
-                    "oup.com"
-                    "ajtmh.org"
-                    "futuremedicine.com"
-                    "tandfonline.com"
-                    "genetics.org"
-                    "healthaffairs.org"
-                    "rsna.org"
-                    "iospress.com"
-                    "allenpress.com"
-                    "asabe.org"
-                    "geoscienceworld.org"
-                    "sagepub.com"
-                    "ajnr.org"
-                    "ajhp.org"
-                    "annals.org"
-                    "esajournals.org"
-                    "informs.org"
-                    "cshlpress.com"
-                    "nrcresearchpress.cn"
-                    "royalsocietypublishing.org"
-                    "oxfordjournals.org"
-                    "aspbjournals.org"
-                    "sciencesocieties.org"
-                    "degruyter.com"
-                    "cshprotocols.org"
-                    "liebertonline.com"
-                    "polymerjournals.com"
-                    "csiro.au"
-                    "iop.org"
-                    "electrochem.org"
-                    "ametsoc.org"
-                    "portlandpress.com"
-                    "nrcresearchpress.com"
-                    "arabidopsis.org"
-                    "springerlink.com"
-                    "highwire.org"
-                    "ovid.com"
-                    "rsc.org"
-                    "bmj.org"
-                    "aip.org"
-                    "springer.com"
-                    "iwaponline.com"
-                    "rsnajnls.org"
-                    "karger.com"
-                    "wiley.com"
-                    "plantcell.org"
-                    "jamanetwork.com"
-                    "nejm.org"
+                    "clash.razord.top",
+                    "yacd.metacubex.one",
+                    "yacd.haishan.me",
+                    "d.metacubex.one",
                 ],
                 "outbound": "direct",
+            },
+        ]
+        + (
+            []
+            if not use_zju
+            else [
+                {
+                    "ip_cidr": ["10.0.0.0/8"],
+                    "domain_suffix": [
+                        "zju.edu.cn",
+                        "cc98.org",
+                        "nexushd.org",
+                        "icsr.wiki",
+                        "zjusec.com",
+                        "zjusec.net",
+                        "zjusec.top",
+                        "zjusct.io",
+                        "zjueva.net",
+                        "zjuqsc.com",
+                        "worldcup.myth.cx",
+                        "illinois.edu",
+                        "acm.org",
+                        "cnki.net",
+                        "gtadata.com",
+                        "jstor.org",
+                        "webofscience.com",
+                        "inoteexpress.com",
+                        "pnas.org",
+                        "cnpereading.com",
+                        "sciencemag.org",
+                        "cas.org",
+                        "webofknowledge.com",
+                        "pkulaw.com",
+                        "sslibrary.com",
+                        "serialssolutions.com",
+                        "duxiu.com",
+                        "wanfangdata.com.cn",
+                        "koolearn.com",
+                        "cssci.nju.edu.cn",
+                        "science.org",
+                        "oup.com",
+                        "ajtmh.org",
+                        "futuremedicine.com",
+                        "tandfonline.com",
+                        "genetics.org",
+                        "healthaffairs.org",
+                        "rsna.org",
+                        "iospress.com",
+                        "allenpress.com",
+                        "asabe.org",
+                        "geoscienceworld.org",
+                        "sagepub.com",
+                        "ajnr.org",
+                        "ajhp.org",
+                        "annals.org",
+                        "esajournals.org",
+                        "informs.org",
+                        "cshlpress.com",
+                        "nrcresearchpress.cn",
+                        "royalsocietypublishing.org",
+                        "oxfordjournals.org",
+                        "aspbjournals.org",
+                        "sciencesocieties.org",
+                        "degruyter.com",
+                        "cshprotocols.org",
+                        "liebertonline.com",
+                        "polymerjournals.com",
+                        "csiro.au",
+                        "iop.org",
+                        "electrochem.org",
+                        "ametsoc.org",
+                        "portlandpress.com",
+                        "nrcresearchpress.com",
+                        "arabidopsis.org",
+                        "springerlink.com",
+                        "highwire.org",
+                        "ovid.com",
+                        "rsc.org",
+                        "bmj.org",
+                        "aip.org",
+                        "springer.com",
+                        "iwaponline.com",
+                        "rsnajnls.org",
+                        "karger.com",
+                        "wiley.com",
+                        "plantcell.org",
+                        "jamanetwork.com",
+                        "nejm.org",
+                        "icevirtuallibrary.com",
+                    ],
+                    "outbound": "direct",
+                },
+            ]
+        )
+        + [
+            {
+                "domain_suffix": [
+                    "canvas-user-content.com",
+                    "iclicker.com",
+                    "emerald.com",
+                    "ieee.org",
+                    "proquest.com",
+                    "sciencedirect.com",
+                    "nature.com",
+                    "acs.org",
+                    "taylorfrancis.com",
+                    "osapublishing.org",
+                    "clarivate.com",
+                    "gale.com",
+                    "worldscientific.com",
+                    "siam.org",
+                    "ascelibrary.org",
+                    "scitation.org",
+                    "wiley.com",
+                ],
+                "geosite": "category-scholar-!cn",
+                "outbound": "学术",
             },
             {
                 "domain_keyword": ["speedtest"],
@@ -429,151 +483,29 @@ bitz_json = {
                 "outbound": "Speedtest",
             },
             {"geosite": "openai", "outbound": "OpenAI"},
-            {"geoip": "google", "geosite": ["google", "github"], "outbound": "Google"},
+            {"geosite": "category-dev-cn", "outbound": "direct"},
+            {
+                "geosite": ["category-dev", "category-container"],
+                "outbound": "Developer",
+            },
+            {"geoip": "google", "geosite": ["google"], "outbound": "Google"},
+            {
+                "geosite": ["category-social-media-cn"],
+                "outbound": "direct",
+            },
             {
                 "geoip": ["telegram", "twitter", "facebook"],
-                "geosite": ["telegram", "twitter", "facebook", "instagram", "discord"],
+                "geosite": ["category-social-media-!cn", "category-communication"],
                 "outbound": "Social",
             },
             {"geosite": "amazon", "outbound": "Shopping"},
             {"geosite": "apple", "outbound": "Apple"},
             {"geosite": "microsoft", "outbound": "Microsoft"},
+            {"geosite": "category-games@cn", "outbound": "direct"},
             {"geosite": "category-games", "outbound": "Game"},
             {
                 "geosite": "bilibili",
                 "outbound": "哔哩哔哩",
-            },
-            {
-                "domain": [
-                    "0gr4uqmtt8y41hcjsgrzdrc31.ourdvsss.com",
-                    "0gr4uqmtt8y41hcjsgrzdrc3s.ourdvsss.com",
-                    "0gr4uqmtt8y41hcjsgrzdrc3z.ourdvsss.com",
-                    "0gr4uqmtt8y41hcjsgrzdrctt.ourdvsss.com",
-                    "0gr4uqmtt8y41hcjsgrzdrctu.ourdvsss.com",
-                    "0gr4uqmtt8y41hcjz8yzdnc31.ourdvsss.com",
-                    "0gr4uqmtt8y41hcjz8yzdnc3t.ourdvsss.com",
-                    "0gr4uqmtt8y41hcjzgazdrpba.ourdvsss.com",
-                    "0gr4uqmtt8y41hcjzgazdrpbz.ourdvsss.com",
-                    "0gr4uqmtt8y41hcjzgazdrpjt.ourdvsss.com",
-                    "0gr5dgmttgha1hcj38yzdncb3.ourdvsss.com",
-                    "112-81-125-43.dhost.00cdn.com",
-                    "113-219-145-1.ksyungslb.com",
-                    "114-236-92-129.ksyungslb.com",
-                    "180-101-74-1.ksyungslb.com",
-                    "1geadrmttge3nhcjwgazdope.ourdvsss.com",
-                    "1geadrmttge3nhcjwgwzdqqe.ourdvsss.com",
-                    "1gr3uomttgr31hcjo8yzdnco.ourdvsss.com",
-                    "1gr3uomttgr31hcjo8yzdnpy.ourdvsss.com",
-                    "1gr3uomttgr31hcjtgezdkcy.ourdvsss.com",
-                    "1gr4uqmtt8y41hcjigazdqca.ourdvsss.com",
-                    "1gr4uqmtt8y41hcjigazdqce.ourdvsss.com",
-                    "1gr4uqmtt8y41hcjigazdqco.ourdvsss.com",
-                    "1gr4uqmtt8y41hcjigazdqpo.ourdvsss.com",
-                    "1gr4uqmtt8y41hcjzgwzdkqe.ourdvsss.com",
-                    "1gr5dgmttgha1hcj38yzdcca.ourdvsss.com",
-                    "1gr5dgmttgha1hcj38yzdcco.ourdvsss.com",
-                    "1gr5dgmttgha1hcj38yzdkca.ourdvsss.com",
-                    "1gr5dgmttgha1hcj38yzdkco.ourdvsss.com",
-                    "1gr5dgmttgha1hcj38yzdkpe.ourdvsss.com",
-                    "1gr5dgmttgha1hcj38yzdkpy.ourdvsss.com",
-                    "1gr5dgmttgha1hcj38yzdkqy.ourdvsss.com",
-                    "1gr5dgmttgha1hcj3gczdcpa.ourdvsss.com",
-                    "1gr5dgmttgha1hcj3gczdcpe.ourdvsss.com",
-                    "1gr5dgmttgha1hcj3gczdcpo.ourdvsss.com",
-                    "1gr5dgmttgha1hcj3gczdcqy.ourdvsss.com",
-                    "1gr5dgmttgha1hcttgrzdnpo.ourdvsss.com",
-                    "1graukmttga4nhcjtgozdgce.ourdvsss.com",
-                    "218-91-225-1.ksyungslb.com",
-                    "219-155-150-1.ksyungslb.com",
-                    "222-188-6-1.ksyungslb.com",
-                    "36-104-134-1.ksyungslb.com",
-                    "36-25-252-1.ksyungslb.com",
-                    "3ge3drmttga5nhcbqge3ur.ourdvsss.com",
-                    "3geauymtsgrzdnqbofa5do.ourdvsss.com",
-                    "3geauymtsgrzdnqbofa5dy.ourdvsss.com",
-                    "3geauymtsgrzdrcbzfahue.ourdvsss.com",
-                    "3geauymtsgrzdrcbzfahuk.ourdvsss.com",
-                    "4go41hcjtgazdoctqge4o.ourdvsss.com",
-                    "p-bstarstatic.akamaized.net",
-                    "p.bstarstatic.com",
-                    "upos-bstar-mirrorakam.akamaized.net",
-                    "upos-bstar1-mirrorakam.akamaized.net",
-                ],
-                "domain_suffix": [
-                    "acg.tv",
-                    "acgvideo.com",
-                    "animetamashi.cn",
-                    "animetamashi.com",
-                    "anitama.cn",
-                    "anitama.net",
-                    "b23.tv",
-                    "baka.im",
-                    "bigfun.cn",
-                    "bigfunapp.cn",
-                    "bili22.cn",
-                    "bili2233.cn",
-                    "bili23.cn",
-                    "bili33.cn",
-                    "biliapi.com",
-                    "biliapi.net",
-                    "bilibili.cc",
-                    "bilibili.cn",
-                    "bilibili.co",
-                    "bilibili.com",
-                    "bilibili.net",
-                    "bilibili.tv",
-                    "bilibiligame.cn",
-                    "bilibiligame.co",
-                    "bilibiligame.net",
-                    "bilibilipay.cn",
-                    "bilibilipay.com",
-                    "bilicdn1.com",
-                    "bilicdn2.com",
-                    "bilicdn3.com",
-                    "bilicdn4.com",
-                    "bilicdn5.com",
-                    "bilicomics.com",
-                    "biligame.cn",
-                    "biligame.co",
-                    "biligame.com",
-                    "biligame.net",
-                    "biligo.com",
-                    "biliimg.com",
-                    "biliintl.com",
-                    "biliplus.com",
-                    "bilivideo.cn",
-                    "bilivideo.com",
-                    "bilivideo.net",
-                    "corari.com",
-                    "dreamcast.hk",
-                    "dyhgames.com",
-                    "hdslb.com",
-                    "hdslb.com.w.kunlunhuf.com",
-                    "hdslb.com.w.kunlunpi.com",
-                    "hdslb.net",
-                    "hdslb.org",
-                    "im9.com",
-                    "maoercdn.com",
-                    "mcbbs.net",
-                    "mincdn.com",
-                    "sharejoytech.com",
-                    "smtcdns.net",
-                    "upos-hz-mirrorakam.akamaized.net",
-                    "uposdash-302-bilivideo.yfcdn.net",
-                    "yo9.com",
-                ],
-                "ip_cidr": [
-                    "106.75.74.76/32",
-                    "111.206.25.147/32",
-                    "119.3.238.64/32",
-                    "120.92.108.182/32",
-                    "120.92.113.99/32",
-                    "120.92.153.217/32",
-                    "134.175.207.130/32",
-                    "203.107.1.0/24",
-                ],
-                "geosite": "biliintl",
-                "outbound": "哔哩东南亚",
             },
             {
                 "geosite": "bahamut",
@@ -581,13 +513,21 @@ bitz_json = {
             },
             {
                 "geoip": "netflix",
-                "geosite": ["youtube", "netflix", "hbo", "disney", "primevideo"],
+                "geosite": [
+                    "youtube",
+                    "netflix",
+                    "hbo",
+                    "disney",
+                    "primevideo",
+                    "category-media",
+                    "category-entertainment",
+                ],
                 "outbound": "Streaming",
             },
-            {"geosite": "geolocation-!cn", "outbound": "proxy"},
+            {"geosite": "geolocation-!cn", "outbound": "not cn"},
             {
                 "geosite": ["private", "cn"],
-                "geoip": ["private", "cn", "LAN"],
+                "geoip": ["private", "cn"],
                 "outbound": "direct",
             },
         ],
@@ -608,10 +548,6 @@ bitz_json = {
 }
 
 
-url_test_dict = {name: copy.deepcopy(url_test_base) for name in place_list}
-for name in place_list:
-    url_test_dict[name]["tag"] = name
-
 single_selecor = {
     "type": "selector",
     "tag": "节点选择",
@@ -621,9 +557,38 @@ single_selecor = {
 }
 
 with open("mixed.yaml", "r", encoding="utf-8") as file, open(
-    "bitz.json", "w", encoding="utf-8"
-) as bitz_file:
+    "result{}.json".format("_zju" if use_zju else ""), "w", encoding="utf-8"
+) as result_file:
     data = yaml.load(file.read(), Loader=yaml.FullLoader)
+    place_list = set()
+
+    for proxy in data["proxies"]:
+        for place_name in place_back:
+            if place_name in proxy["name"]:
+                place_list.add(place_name)
+    place_list = list(place_list)
+
+    result_json["outbounds"].append(
+        {
+            "type": "urltest",
+            "tag": "auto",
+            "outbounds": copy.deepcopy(place_list),
+            "url": "https://www.gstatic.com/generate_204",
+            "interval": "1m",
+            "tolerance": 50,
+        }
+    )
+    result_json["outbounds"].append(
+        {
+            "tag": "地区选择",
+            "type": "selector",
+            "outbounds": copy.deepcopy(place_list),
+        },
+    )
+
+    url_test_dict = {name: copy.deepcopy(url_test_base) for name in place_list}
+    for name in place_list:
+        url_test_dict[name]["tag"] = name
     for proxy in data["proxies"]:
         single_selecor["outbounds"].append(proxy["name"])
         for place_name in place_list:
@@ -634,10 +599,13 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
                 server_now["server"] = proxy["server"]
                 server_now["server_port"] = proxy["port"]
                 server_now["password"] = proxy["password"]
-                bitz_json["outbounds"].append(server_now)
+                if "sni" in proxy:
+                    server_now["tls"]["server_name"] = proxy["sni"]
+                result_json["outbounds"].append(server_now)
 
                 break
+
     for url_test in url_test_dict.values():
-        bitz_json["outbounds"].append(url_test)
-    bitz_json["outbounds"].append(single_selecor)
-    bitz_file.write(json.dumps(bitz_json, ensure_ascii=False))
+        result_json["outbounds"].append(url_test)
+    result_json["outbounds"].append(single_selecor)
+    result_file.write(json.dumps(result_json, ensure_ascii=False))

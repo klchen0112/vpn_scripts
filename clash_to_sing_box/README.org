@@ -1,0 +1,11 @@
+# 如何使用
+
+1. 复制你的clash订阅到mixed.yaml
+2. 执行run.py
+
+#+begin_src shell
+# 不使用zju dns解析内网
+python run.py
+# 或使用zju dns 解析内网
+python run.py --zju
+#+end_src
