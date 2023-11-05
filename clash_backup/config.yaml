@@ -1,0 +1,653 @@
+port: 7894
+socks-port: 7891
+redir-port: 7892
+tproxy-port: 7893 # 本地Linux Tproxy代理端口
+mixed-port: 7890
+
+geodata-mode: true #【Meta专属】使用geoip.dat数据库(默认：false使用mmdb数据库)
+geox-url:
+  geoip: "https://cdn.jsdelivr.net/gh/Loyalsoldier/v2ray-rules-dat@release/geoip.dat"
+  geosite: "https://cdn.jsdelivr.net/gh/Loyalsoldier/v2ray-rules-dat@release/geosite.dat"
+  mmdb: "https://cdn.jsdelivr.net/gh/Loyalsoldier/geoip@release/Country.mmdb"
+
+tcp-concurrent: true #【Meta专属】TCP连接并发，如果域名解析结果对应多个IP，并发所有IP，选择握手最快的IP进行连接
+allow-lan: false # 允许局域网连接(false/true)
+bind-address: "*" # 监听IP白名单（当allow-lan：true），只允许列表设备，'*'表示全部设备
+mode: rule # clash工作模式（rule/global/direct,meta暂不支持script）
+log-level: warning # 日志等级（info/warning/error/debug/silent）
+ipv6: false # ip6开关，当为false时，停止解析hostanmes为ip6地址
+global-client-fingerprint: random
+external-controller: "0.0.0.0:9090" # 控制器监听地址
+# external-ui: /etc/clash/ui             # http服务路径，可以放静态web网页。
+#                                        # 如yacd的控制面板，可通过`http://{{external-controller}}/ui`直接使用
+#                                        # 也可以直接使用别人搭建好了的，博主就是这样。
+#                                        # 所以这里直接注释掉了
+
+# interface-name: eth0                   # 出口网卡名称
+# routing-mark: 6666                     # 流量标记(仅Linux)
+tun:
+  enable: true
+  stack: system
+  dns-hijack:
+    - any:53
+    - tcp://any:53
+  auto-detect-interface: true
+  auto-route: true
+  mtu: 9000
+profile: #缓存设置(文件位置./cache.db)
+  store-selected: true #节点状态记忆（若不同配置有同代理名称,设置值共享）
+  store-fake-ip: true #fake-ip缓存
+
+sniffer:
+  enable: true
+  sniff:
+    TLS:
+      ports: [443, 8443]
+    HTTP:
+      ports: [80, 8080-8880]
+      override-destination: true
+
+dns:
+  enable: true # DNS开关(false/true)
+  prefer-h3: true
+  listen: 0.0.0.0:7874 # DNS监听地址
+  ipv6: false # IP6解析开关；如果为false，将返回ip6结果为空
+  enhanced-mode: fake-ip # DNS模式(redir-host/fake-ip)
+  fake-ip-range: 28.0.0.1/8
+  nameserver: # 默认DNS服务器，支持udp/tcp/dot/doh/doq
+    - tls://1.12.12.12:853
+    - tls://223.5.5.5:853
+    - https://1.12.12.12/dns-query
+    - https://223.5.5.5/dns-query
+    - "https://1.0.0.1/dns-query#h3=true"
+  # Lookup domains via specific nameservers
+  nameserver-policy:
+    "geosite:cn,private":
+      - "https://223.5.5.5/dns-query#h3=true"
+      - "https://223.6.6.6/dns-query#h3=true"
+    "+.cc98.org,+.zju.edu.cn":
+      - "10.10.0.21"
+      - "10.10.2.21"
+      - "10.66.10.10"
+proxy-groups:
+  - name: Proxy
+    type: select # 手动代理组
+    proxies:
+      - Automatic
+      - 节点选择
+      - 外服游戏
+      - 香港
+      - 日本
+      - 新加坡
+      - 台湾
+      - 美国
+      - 韩国
+      - 英国
+      - 法国
+      - 俄罗斯
+      - 德国
+      - 澳大利亚
+      - 菲律宾
+      - 土耳其
+      - 阿根廷
+      - 乌克兰
+      - 巴西
+      - 印度
+      # - 巴基斯坦
+      # - 泰国
+      - DIRECT
+  - name: 节点选择
+    type: select # 手动代理组
+    use:
+      - BITZ
+
+  - name: 外服游戏
+    type: select
+    proxies:
+      - 香港
+      - 日本
+  - name: "Automatic"
+    type: url-test
+    tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
+    url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
+    interval: 300 # 测ping时间(秒)
+    lazy: true
+    proxies:
+      - 香港
+      - 日本
+      - 新加坡
+      - 台湾
+      - 美国
+      - 韩国
+      - 英国
+      - 法国
+      - 俄罗斯
+      - 德国
+      - 澳大利亚
+      - 菲律宾
+      - 土耳其
+      - 阿根廷
+      - 乌克兰
+      - 巴西
+      - 印度
+      #- 巴基斯坦
+      # - 泰国
+  - name: OneDrive
+    type: select
+    proxies:
+      - Proxy
+      - DIRECT
+  - name: Microsoft
+    type: select
+    proxies:
+      - DIRECT
+      - Proxy
+  - name: Social
+    type: select
+    proxies:
+      - Proxy
+      - DIRECT
+  - name: 哔哩哔哩
+    type: select # 手动代理组
+    proxies:
+      - DIRECT
+      - 香港
+      - 台湾
+  - name: B站港澳台
+    type: select # 手动代理组
+    proxies:
+      - 台湾
+      - 香港
+      - DIRECT
+  - name: 动画疯
+    type: select
+    tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
+    url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
+    interval: 300 # 测ping时间(秒)
+    lazy: true
+    proxies:
+      - 台湾
+      - DIRECT
+  - name: Streaming
+    type: select
+    proxies:
+      - Proxy
+      - DIRECT
+  - name: Apple
+    type: select
+    proxies:
+      - DIRECT
+      - Proxy
+
+  - name: 学术
+    type: select
+    proxies:
+      - 学术节点
+      - Proxy
+      - 节点选择
+      - DIRECT
+  - name: 学术节点
+    type: select
+    # strategy: consistent-hashing
+    # tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
+    # url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
+    # interval: 300 # 测ping时间(秒)
+    lazy: true
+    use:
+      - BITZ
+
+  - name: OpenAI
+    type: select # 手动代理组
+    proxies:
+      - 美国
+      - 节点选择
+      - Automatic
+      - 外服游戏
+      - 香港
+      - 日本
+      - 新加坡
+      - 台湾
+      - 韩国
+      - 英国
+      - 法国
+      - 俄罗斯
+      - 德国
+      - 澳大利亚
+      - 菲律宾
+      - 土耳其
+      - 阿根廷
+      - 乌克兰
+      - 巴西
+      - 印度
+      # - 巴基斯坦
+      # - 泰国
+
+  - name: 香港
+    type: load-balance
+    strategy: consistent-hashing
+    tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
+    url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
+    interval: 300 # 测ping时间(秒)
+    lazy: true
+    use:
+      - BITZ
+    filter: "香港"
+  - name: 日本
+    type: load-balance
+    strategy: consistent-hashing
+    use:
+      - BITZ
+    filter: "日本"
+    tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
+    url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
+    interval: 300 # 测ping时间(秒)
+    lazy: true
+  - name: 新加坡
+    type: load-balance
+    strategy: consistent-hashing
+    use:
+      - BITZ
+    tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
+    url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
+    interval: 300 # 测ping时间(秒)
+    lazy: true
+    filter: "新加坡"
+  - name: 台湾
+    type: load-balance
+    strategy: consistent-hashing
+    use:
+      - BITZ
+    filter: "台湾"
+    tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
+    url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
+    interval: 300 # 测ping时间(秒)
+    lazy: true
+
+  - name: 美国
+    type: load-balance
+    strategy: consistent-hashing
+    use:
+      - BITZ
+    filter: "美国"
+    tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
+    url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
+    interval: 300 # 测ping时间(秒)
+    lazy: true
+  - name: 韩国
+    type: load-balance
+    strategy: consistent-hashing
+    use:
+      - BITZ
+    filter: "韩国"
+    tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
+    url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
+    interval: 300 # 测ping时间(秒)
+    lazy: true
+  - name: 英国
+    type: load-balance
+    strategy: consistent-hashing
+    use:
+      - BITZ
+    filter: "英国"
+    tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
+    url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
+    interval: 300 # 测ping时间(秒)
+    lazy: true
+  - name: 俄罗斯
+    type: load-balance
+    strategy: consistent-hashing
+    use:
+      - BITZ
+    filter: "俄罗斯"
+    tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
+    url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
+    interval: 300 # 测ping时间(秒)
+    lazy: true
+  - name: 法国
+    type: load-balance
+    strategy: consistent-hashing
+    use:
+      - BITZ
+    filter: "法国"
+    tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
+    url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
+    interval: 300 # 测ping时间(秒)
+    lazy: true
+  - name: 德国
+    type: load-balance
+    strategy: consistent-hashing
+    use:
+      - BITZ
+    filter: "德国"
+    tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
+    url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
+    interval: 300 # 测ping时间(秒)
+    lazy: true
+  - name: 澳大利亚
+    type: load-balance
+    strategy: consistent-hashing
+    use:
+      - BITZ
+    filter: "澳大利亚"
+    tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
+    url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
+    interval: 300 # 测ping时间(秒)
+    lazy: true
+  - name: 菲律宾
+    type: load-balance
+    strategy: consistent-hashing
+    use:
+      - BITZ
+    filter: "菲律宾"
+    tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
+    url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
+    interval: 300 # 测ping时间(秒)
+    lazy: true
+  - name: 土耳其
+    type: load-balance
+    strategy: consistent-hashing
+    use:
+      - BITZ
+    filter: "土耳其"
+    tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
+    url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
+    interval: 300 # 测ping时间(秒)
+    lazy: true
+  - name: 阿根廷
+    type: load-balance
+    strategy: consistent-hashing
+    use:
+      - BITZ
+    filter: "阿根廷"
+    tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
+    url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
+    interval: 300 # 测ping时间(秒)
+    lazy: true
+  - name: 乌克兰
+    type: select
+    use:
+      - BITZ
+    filter: "乌克兰"
+    tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
+    url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
+    interval: 300 # 测ping时间(秒)
+    lazy: true
+  - name: 巴西
+    type: load-balance
+    strategy: consistent-hashing
+    use:
+      - BITZ
+    filter: "巴西"
+    tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
+    url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
+    intBRval: 300 # 测ping时间(秒)
+  - name: 印度
+    type: load-balance
+    strategy: consistent-hashing
+    use:
+      - BITZ
+    filter: "印度"
+    tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
+    url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
+    interval: 300 # 测ping时间(秒)
+    lazy: true
+  - name: 漏网之鱼
+    type: select
+    proxies:
+      - Proxy
+      - DIRECT
+proxy-providers:
+  BITZ:
+    type: http
+    url: "你的订阅连接"
+    interval: 86400
+    path: ./bitz.yaml
+    health-check:
+      enable: true
+      interval: 600
+      lazy: true
+      url: https://cp.cloudflare.com/generate_204
+
+rules:
+  - GEOIP,LAN,DIRECT,no-resolve
+  - DOMAIN-SUFFIX,tpddns.cn,DIRECT
+
+  #### ZJU Start
+  # ZJU 内网
+  # 校内直连，校外通过内网穿透或 RVPN 访问
+  # 校内 IP
+  - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
+  # 域名
+  - DOMAIN-SUFFIX,zju.edu.cn,DIRECT
+
+  # CC98
+  - DOMAIN-SUFFIX,cc98.org,DIRECT
+  # NexusHD
+  - DOMAIN-SUFFIX,nexushd.org,DIRECT
+
+  # ICSR WIKI
+  - DOMAIN-SUFFIX,icsr.wiki,DIRECT
+
+  # ZJU School-Bus
+  - DOMAIN-SUFFIX,zjusec.com,DIRECT
+  - DOMAIN-SUFFIX,zjusec.net,DIRECT
+  - DOMAIN-SUFFIX,zjusec.top,DIRECT
+
+  # ZJU SCT
+  - DOMAIN-SUFFIX,zjusct.io,DIRECT
+
+  # ZJU EVA
+  - DOMAIN-SUFFIX,zjueva.net,DIRECT
+
+  # ZJU QSC
+  - DOMAIN-SUFFIX,zjuqsc.com,DIRECT
+
+  # World Cup
+  - DOMAIN-SUFFIX,worldcup.myth.cx,DIRECT
+
+  # Illinois
+  # 国际校区要用，走代理会被判异地强制改密码
+  - DOMAIN-SUFFIX,illinois.edu,DIRECT
+
+  # 通过 IP 认证的资源
+  # 请勿添加可通过统一身份认证访问的国外资源，此类资源无需内网环境，可通过代理加速访问
+  - DOMAIN-SUFFIX,acm.org,DIRECT
+  - DOMAIN-SUFFIX,cnki.net,DIRECT
+  - DOMAIN-SUFFIX,gtadata.com,DIRECT
+  - DOMAIN-SUFFIX,jstor.org,DIRECT
+  - DOMAIN-SUFFIX,webofscience.com,DIRECT
+  - DOMAIN-SUFFIX,inoteexpress.com,DIRECT
+  - DOMAIN-SUFFIX,pnas.org,DIRECT
+  - DOMAIN-SUFFIX,cnpereading.com,DIRECT
+  - DOMAIN-SUFFIX,sciencemag.org,DIRECT
+  - DOMAIN-SUFFIX,cas.org,DIRECT
+  - DOMAIN-SUFFIX,webofknowledge.com,DIRECT
+  - DOMAIN-SUFFIX,pkulaw.com,DIRECT
+  - DOMAIN-SUFFIX,sslibrary.com,DIRECT
+  - DOMAIN-SUFFIX,serialssolutions.com,DIRECT
+  - DOMAIN-SUFFIX,duxiu.com,DIRECT
+  - DOMAIN-SUFFIX,wanfangdata.com.cn,DIRECT
+  - DOMAIN-SUFFIX,koolearn.com,DIRECT
+  - DOMAIN-SUFFIX,cssci.nju.edu.cn,DIRECT
+  - DOMAIN-SUFFIX,science.org,DIRECT
+
+  # NSTL
+  - DOMAIN-SUFFIX,oup.com,DIRECT
+  - DOMAIN-SUFFIX,ajtmh.org,DIRECT
+  - DOMAIN-SUFFIX,futuremedicine.com,DIRECT
+  - DOMAIN-SUFFIX,tandfonline.com,DIRECT
+  - DOMAIN-SUFFIX,genetics.org,DIRECT
+  - DOMAIN-SUFFIX,healthaffairs.org,DIRECT
+  - DOMAIN-SUFFIX,rsna.org,DIRECT
+  - DOMAIN-SUFFIX,iospress.com,DIRECT
+  - DOMAIN-SUFFIX,allenpress.com,DIRECT
+  - DOMAIN-SUFFIX,asabe.org,DIRECT
+  - DOMAIN-SUFFIX,geoscienceworld.org,DIRECT
+  - DOMAIN-SUFFIX,sagepub.com,DIRECT
+  - DOMAIN-SUFFIX,ajnr.org,DIRECT
+  - DOMAIN-SUFFIX,ajhp.org,DIRECT
+  - DOMAIN-SUFFIX,annals.org,DIRECT
+  - DOMAIN-SUFFIX,esajournals.org,DIRECT
+  - DOMAIN-SUFFIX,informs.org,DIRECT
+  - DOMAIN-SUFFIX,cshlpress.com,DIRECT
+  - DOMAIN-SUFFIX,nrcresearchpress.cn,DIRECT
+  - DOMAIN-SUFFIX,royalsocietypublishing.org,DIRECT
+  - DOMAIN-SUFFIX,oxfordjournals.org,DIRECT
+  - DOMAIN-SUFFIX,aspbjournals.org,DIRECT
+  - DOMAIN-SUFFIX,sciencesocieties.org,DIRECT
+  - DOMAIN-SUFFIX,degruyter.com,DIRECT
+  - DOMAIN-SUFFIX,cshprotocols.org,DIRECT
+  - DOMAIN-SUFFIX,liebertonline.com,DIRECT
+  - DOMAIN-SUFFIX,polymerjournals.com,DIRECT
+  - DOMAIN-SUFFIX,csiro.au,DIRECT
+  - DOMAIN-SUFFIX,iop.org,DIRECT
+  - DOMAIN-SUFFIX,electrochem.org,DIRECT
+  - DOMAIN-SUFFIX,ametsoc.org,DIRECT
+  - DOMAIN-SUFFIX,portlandpress.com,DIRECT
+  - DOMAIN-SUFFIX,nrcresearchpress.com,DIRECT
+  - DOMAIN-SUFFIX,arabidopsis.org,DIRECT
+  - DOMAIN-SUFFIX,springerlink.com,DIRECT
+  - DOMAIN-SUFFIX,highwire.org,DIRECT
+  - DOMAIN-SUFFIX,ovid.com,DIRECT
+  - DOMAIN-SUFFIX,rsc.org,DIRECT
+  - DOMAIN-SUFFIX,bmj.org,DIRECT
+  - DOMAIN-SUFFIX,aip.org,DIRECT
+  - DOMAIN-SUFFIX,springer.com,DIRECT
+  - DOMAIN-SUFFIX,iwaponline.com,DIRECT
+  - DOMAIN-SUFFIX,rsnajnls.org,DIRECT
+  - DOMAIN-SUFFIX,karger.com,DIRECT
+  - DOMAIN-SUFFIX,wiley.com,DIRECT
+  - DOMAIN-SUFFIX,plantcell.org,DIRECT
+  - DOMAIN-SUFFIX,jamanetwork.com,DIRECT
+  - DOMAIN-SUFFIX,nejm.org,DIRECT
+
+  ### ZJU end
+
+  # - DOMAIN-SUFFIX,plex.direct,DIRECT
+  - GEOSITE,openai,OpenAI
+  - DOMAIN-SUFFIX,jsdelivr.net,DIRECT
+  - DOMAIN-SUFFIX,fastgit.org,DIRECT
+  # Github
+  - DOMAIN-SUFFIX,v2.shared.global.fastly.net,Proxy
+  - DOMAIN-SUFFIX,fastly.net,Proxy
+  - DOMAIN-SUFFIX,nixos.org,Proxy
+  - DOMAIN-SUFFIX,nixos.dev,Proxy
+  - GEOSITE,category-dev-cn,DIRECT
+  #- GEOSITE,category-dev-!cn,Proxy
+  # 局域网直连
+
+  # 广告过滤
+  - GEOSITE,category-ads-all,REJECT
+  # PROCESS rule
+  - PROCESS-NAME,aria2c,DIRECT
+  - PROCESS-NAME,BitComet,DIRECT
+  - PROCESS-NAME,fdm,DIRECT
+  - PROCESS-NAME,NetTransport,DIRECT
+  - PROCESS-NAME,qbittorrent,DIRECT
+  - PROCESS-NAME,Thunder,DIRECT
+  - PROCESS-NAME,transmission-daemon,DIRECT
+  - PROCESS-NAME,transmission-qt,DIRECT
+  - PROCESS-NAME,uTorrent,DIRECT
+  - PROCESS-NAME,WebTorrent,DIRECT
+  - PROCESS-NAME,aria2c,DIRECT
+  - PROCESS-NAME,fdm,DIRECT
+  - PROCESS-NAME,Folx,DIRECT
+  - PROCESS-NAME,NetTransport,DIRECT
+  - PROCESS-NAME,qbittorrent,DIRECT
+  - PROCESS-NAME,Thunder,DIRECT
+  - PROCESS-NAME,Transmission,DIRECT
+  - PROCESS-NAME,transmission,DIRECT
+  - PROCESS-NAME,uTorrent,DIRECT
+  - PROCESS-NAME,WebTorrent,DIRECT
+  - PROCESS-NAME,WebTorrent Helper,DIRECT
+  - PROCESS-NAME,v2ray,DIRECT
+  - PROCESS-NAME,ss-local,DIRECT
+  - PROCESS-NAME,ssr-local,DIRECT
+  - PROCESS-NAME,ss-redir,DIRECT
+  - PROCESS-NAME,ssr-redir,DIRECT
+  - PROCESS-NAME,ss-server,DIRECT
+  - PROCESS-NAME,trojan-go,DIRECT
+  - PROCESS-NAME,xray,DIRECT
+  - PROCESS-NAME,hysteria,DIRECT
+  - PROCESS-NAME,UUBooster,DIRECT
+  - PROCESS-NAME,uugamebooster,DIRECT
+
+  - GEOSITE,category-education-cn,DIRECT
+
+  # 学术
+  - GEOSITE,category-scholar-!cn,学术
+  - GEOSITE,category-scholar-cn,DIRECT
+  - DOMAIN-SUFFIX,academictorrents.com,学术
+  # 游戏
+  - DOMAIN-SUFFIX,konami.net,外服游戏
+
+  - GEOSITE,category-games@cn,DIRECT
+  - GEOSITE,category-games,外服游戏
+
+  # rule-providers 分流规则
+  # 微软
+  - GEOSITE,onedrive,OneDrive
+  # 苹果
+  - GEOSITE,apple@cn,DIRECT
+  # 谷歌
+  - GEOSITE,google,Proxy
+
+  # 巴哈姆特
+  - GEOSITE,bahamut,动画疯
+  # B站港澳台
+  # 内容：BilibiliHMT 哔哩哔哩 港澳台番剧
+  # 数量：21条
+  - DOMAIN,p-bstarstatic.akamaized.net,B站港澳台
+  - DOMAIN,p.bstarstatic.com,B站港澳台
+  - DOMAIN,upos-bstar-mirrorakam.akamaized.net,B站港澳台
+  - DOMAIN,upos-bstar1-mirrorakam.akamaized.net,B站港澳台
+  - DOMAIN,upos-hz-mirrorakam.akamaized.net,B站港澳台
+  - DOMAIN-SUFFIX,acgvideo.com,B站港澳台
+  - DOMAIN-SUFFIX,bilibili.com,B站港澳台
+  - DOMAIN-SUFFIX,bilibili.tv,B站港澳台
+  - IP-CIDR,45.43.32.234/32,B站港澳台,no-resolve
+  - IP-CIDR,103.151.150.0/23,B站港澳台,no-resolve
+  - IP-CIDR,119.29.29.29/32,B站港澳台,no-resolve
+  - IP-CIDR,128.1.62.200/32,B站港澳台,no-resolve
+  - IP-CIDR,128.1.62.201/32,B站港澳台,no-resolve
+  - IP-CIDR,150.116.92.250/32,B站港澳台,no-resolve
+  - IP-CIDR,164.52.33.178/32,B站港澳台,no-resolve
+  - IP-CIDR,164.52.33.182/32,B站港澳台,no-resolve
+  - IP-CIDR,164.52.76.18/32,B站港澳台,no-resolve
+  - IP-CIDR,203.107.1.33/32,B站港澳台,no-resolve
+  - IP-CIDR,203.107.1.34/32,B站港澳台,no-resolve
+  - IP-CIDR,203.107.1.65/32,B站港澳台,no-resolve
+  - IP-CIDR,203.107.1.66/32,B站港澳台,no-resolve
+  # - GEOSITE,biliintl,哔哩东南亚
+  - GEOSITE,bilibili,哔哩哔哩
+  - GEOSITE,category-social-media-cn,DIRECT
+  # 国际媒体
+  - GEOSITE,category-entertainment,Streaming
+  # 国际社交 Social
+  - GEOSITE,telegram,Social
+  - GEOSITE,discord,Social
+  - GEOSITE,CN,DIRECT
+
+  - GEOSITE,geolocation-!cn,Proxy
+  # GEOIP规则
+  - GEOIP,CN,DIRECT
+  - GEOIP,TELEGRAM,Social
+  - GEOIP,HK,香港
+  - GEOIP,US,美国
+  - GEOIP,TW,台湾
+  - GEOIP,JP,日本
+  - GEOIP,KR,韩国
+  - GEOIP,SG,新加坡
+  - GEOIP,FR,法国
+  # - GEOIP,UK,英国
+  - GEOIP,DE,德国
+  - GEOIP,AU,澳大利亚
+  - GEOIP,PH,菲律宾
+  - GEOIP,TR,土耳其
+  - GEOIP,AR,阿根廷
+  - GEOIP,UA,乌克兰
+  - GEOIP,BR,巴西
+  - GEOIP,IN,印度
+
+  # 兜底规则
+  - MATCH,漏网之鱼
