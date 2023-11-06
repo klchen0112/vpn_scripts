@@ -186,7 +186,7 @@ result_json = {
             ]
         )
         + [
-            {"geosite": ["cn", "private","category-games@cn"], "server": "localDns"},
+            {"geosite": ["cn", "private", "category-games@cn"], "server": "localDns"},
             {"clash_mode": "direct", "server": "localDns"},
             {"clash_mode": "global", "server": "proxyDns"},
             {"geosite": "geolocation-!cn", "server": "proxyDns"},
@@ -366,7 +366,6 @@ result_json = {
             if not use_zju
             else [
                 {
-                    "ip_cidr": ["10.0.0.0/8"],
                     "domain_suffix": [
                         "zju.edu.cn",
                         "cc98.org",
@@ -488,13 +487,12 @@ result_json = {
                 "geosite": ["category-dev", "category-container"],
                 "outbound": "Developer",
             },
-            {"geoip": "google", "geosite": ["google"], "outbound": "Google"},
+            {"geosite": ["google"], "outbound": "Google"},
             {
                 "geosite": ["category-social-media-cn"],
                 "outbound": "direct",
             },
             {
-                "geoip": ["telegram", "twitter", "facebook"],
                 "geosite": ["category-social-media-!cn", "category-communication"],
                 "outbound": "Social",
             },
@@ -512,7 +510,6 @@ result_json = {
                 "outbound": "巴哈姆特",
             },
             {
-                "geoip": "netflix",
                 "geosite": [
                     "youtube",
                     "netflix",
@@ -525,8 +522,28 @@ result_json = {
                 "outbound": "Streaming",
             },
             {"geosite": "geolocation-!cn", "outbound": "not cn"},
+        ]
+        + (
+            []
+            if not use_zju
+            else [
+                {
+                    "ip_cidr": ["10.0.0.0/8"],
+                    "outbound": "direct",
+                },
+            ]
+        )
+        + [
+            {"geoip": "google", "outbound": "Google"},
             {
-                "geosite": ["private", "cn"],
+                "geoip": ["telegram", "twitter", "facebook"],
+                "outbound": "Social",
+            },
+            {
+                "geoip": "netflix",
+                "outbound": "Streaming",
+            },
+            {
                 "geoip": ["private", "cn"],
                 "outbound": "direct",
             },
