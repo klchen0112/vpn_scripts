@@ -6,11 +6,12 @@ import argparse
 parser = argparse.ArgumentParser(description="")
 
 parser.add_argument("-z", "--zju", help="wether use zju", action="store_true")
+parser.add_argument("-s", "--speed", help="高速节点", type=str)
 
 args = parser.parse_args()
 
 use_zju = args.zju
-
+high_speed = args.speed
 
 url_test_base = {
     "type": "urltest",
@@ -20,19 +21,48 @@ url_test_base = {
     "interval": "1m",
     "tolerance": 50,
 }
-server_base = {
-    "type": "trojan",
-    "tag": "",
-    "server": "",
-    "server_port": "",
-    "password": "",
-    "tls": {
-        "enabled": True,
-        "disable_sni": False,
-        "server_name": "",
-        "insecure": False,
-    },
-}
+
+
+def process_proxy(proxy):
+    if proxy["type"] == "ss":
+        ss_server_base = {
+            "type": "shadowsocks",
+            "tag": "",
+            "server": "",
+            "server_port": "",
+            "method": "",
+            "password": "",
+        }
+        result = copy.deepcopy(ss_server_base)
+        result["tag"] = proxy["name"]
+        result["server"] = proxy["server"]
+        result["server_port"] = proxy["port"]
+        result["method"] = proxy["cipher"]
+        result["password"] = proxy["password"]
+        return result
+    elif proxy["type"] == "trojan":
+        trojan_server_base = {
+            "type": "trojan",
+            "tag": "",
+            "server": "",
+            "server_port": "",
+            "password": "",
+            "tls": {
+                "enabled": True,
+                "disable_sni": False,
+                "server_name": "",
+                "insecure": False,
+            },
+        }
+        result = copy.deepcopy(trojan_server_base)
+        result["tag"] = proxy["name"]
+        result["server"] = proxy["server"]
+        result["server_port"] = proxy["port"]
+        result["password"] = proxy["password"]
+        if "sni" in proxy:
+            result["tls"]["server_name"] = proxy["sni"]
+        return result
+
 
 place_back = [
     "香港",
@@ -52,6 +82,8 @@ place_back = [
     "乌克兰",
     "巴西",
     "印度",
+    "意大利",
+    "埃及",
 ]
 
 result_json = {
@@ -229,7 +261,8 @@ result_json = {
         {
             "tag": "proxy",
             "type": "selector",
-            "outbounds": ["auto", "地区选择", "节点选择", "direct"],
+            "outbounds": (["高速节点"] if high_speed is not None else [])
+            + ["auto", "地区选择", "节点选择", "direct"],
         },
         {
             "tag": "广告过滤",
@@ -260,7 +293,7 @@ result_json = {
         {
             "tag": "OneDrive",
             "type": "selector",
-            "outbounds": ["proxy", "direct"],
+            "outbounds": ["auto","proxy", "direct"],
         },
         {
             "tag": "Microsoft",
@@ -273,7 +306,7 @@ result_json = {
         {
             "tag": "Social",
             "type": "selector",
-            "outbounds": ["proxy", "direct"],
+            "outbounds": ["auto","proxy", "direct"],
         },
         {
             "tag": "Shopping",
@@ -321,7 +354,7 @@ result_json = {
         {
             "tag": "Streaming",
             "type": "selector",
-            "outbounds": ["proxy", "direct"],
+            "outbounds": ["auto","proxy", "direct"],
         },
         {
             "tag": "Google",
@@ -511,6 +544,7 @@ result_json = {
             },
             {
                 "geosite": [
+                    "tiktok",
                     "youtube",
                     "netflix",
                     "hbo",
@@ -604,25 +638,23 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
     )
 
     url_test_dict = {name: copy.deepcopy(url_test_base) for name in place_list}
+    if high_speed is not None:
+        url_test_dict["高速节点"] = copy.deepcopy(url_test_base)
+        url_test_dict["高速节点"]["tag"] = "高速节点"
     for name in place_list:
         url_test_dict[name]["tag"] = name
     for proxy in data["proxies"]:
         single_selecor["outbounds"].append(proxy["name"])
+        if high_speed is not None and high_speed in proxy["name"]:
+            url_test_dict["高速节点"]["outbounds"].append(proxy["name"])
+            continue
         for place_name in place_list:
             if place_name in proxy["name"]:
                 url_test_dict[place_name]["outbounds"].append(proxy["name"])
-                server_now = copy.deepcopy(server_base)
-                server_now["tag"] = proxy["name"]
-                server_now["server"] = proxy["server"]
-                server_now["server_port"] = proxy["port"]
-                server_now["password"] = proxy["password"]
-                if "sni" in proxy:
-                    server_now["tls"]["server_name"] = proxy["sni"]
-                result_json["outbounds"].append(server_now)
-
                 break
-
+    result_json["outbounds"].append(single_selecor)
     for url_test in url_test_dict.values():
         result_json["outbounds"].append(url_test)
-    result_json["outbounds"].append(single_selecor)
+    for proxy in data["proxies"]:
+        result_json["outbounds"].append(process_proxy(proxy=proxy))
     result_file.write(json.dumps(result_json, ensure_ascii=False))
