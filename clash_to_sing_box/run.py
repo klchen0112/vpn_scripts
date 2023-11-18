@@ -7,6 +7,7 @@ parser = argparse.ArgumentParser(description="")
 
 parser.add_argument("-z", "--zju", help="wether use zju", action="store_true")
 parser.add_argument("-s", "--speed", help="高速节点", type=str)
+parser.add_argument("--six", help="ipv6", action="store_true")
 
 args = parser.parse_args()
 
@@ -223,11 +224,12 @@ result_json = {
             {"clash_mode": "global", "server": "proxyDns"},
             {"geosite": "geolocation-!cn", "server": "proxyDns"},
             {"query_type": ["A", "AAAA"], "server": "remote"},
+            {"outbound": ["any"], "server": "remote"},
         ],
         "fakeip": {
             "enabled": True,
             "inet4_range": "198.18.0.0/15",
-            "inet6_range": "fc00::/18",
+            # "inet6_range": "fc00::/18",
         },
         "independent_cache": True,
         "strategy": "ipv4_only",
@@ -241,7 +243,7 @@ result_json = {
             "strict_route": True,
             "sniff": True,
             "endpoint_independent_nat": False,
-            "stack": "system",
+            "stack": "mixed",
             "platform": {
                 "http_proxy": {
                     "enabled": True,
@@ -293,7 +295,7 @@ result_json = {
         {
             "tag": "OneDrive",
             "type": "selector",
-            "outbounds": ["auto","proxy", "direct"],
+            "outbounds": ["auto", "proxy", "direct"],
         },
         {
             "tag": "Microsoft",
@@ -306,7 +308,7 @@ result_json = {
         {
             "tag": "Social",
             "type": "selector",
-            "outbounds": ["auto","proxy", "direct"],
+            "outbounds": ["auto", "proxy", "direct"],
         },
         {
             "tag": "Shopping",
@@ -354,7 +356,7 @@ result_json = {
         {
             "tag": "Streaming",
             "type": "selector",
-            "outbounds": ["auto","proxy", "direct"],
+            "outbounds": ["auto", "proxy", "direct"],
         },
         {
             "tag": "Google",
@@ -379,7 +381,17 @@ result_json = {
             "download_detour": "direct",
         },
         "rules": [
-            {"protocol": "dns", "outbound": "dns-out"},
+            {
+                "type": "logical",
+                "mode": "or",
+                "rules": [
+                    {
+                        "protocol": "dns",
+                        "port": [53],
+                    }
+                ],
+                "outbound": "dns-out",
+            },
             {"network": "udp", "port": 443, "outbound": "block"},
             {"geosite": "category-ads-all", "outbound": "广告过滤"},
             {"clash_mode": "direct", "outbound": "direct"},
