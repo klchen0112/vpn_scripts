@@ -230,7 +230,11 @@ dns_settings = {
         ]
     )
     + [
-        {"outbound": "any", "server": "dns-direct"},
+        {"outbound": "any", "server": "dns-direct", "disable_cache": True},
+        {"geosite": "cn", "server": "dns-direct"},
+        {"clash_mode": "direct", "server": "dns-direct"},
+        {"clash_mode": "global", "server": "dns-remote"},
+        {"geosite": "geolocation-!cn", "server": "dns-remote"},
         {"query_type": ["A", "AAAA"], "server": "dns-fakeip"},
         # {"outbound": ["any"], "server": "remote"},
     ],
@@ -261,6 +265,13 @@ inbounds_settings = [
             }
         },
     },
+    {
+      "type": "mixed",
+      "listen": "127.0.0.1",
+      "listen_port": 7890,
+      "sniff": True,
+      "users": []
+    }
 ]
 
 outbounds_settings = [
