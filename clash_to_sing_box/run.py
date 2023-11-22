@@ -179,9 +179,9 @@ log_settings = {
 }
 dns_settings = {
     "servers": [
-        {"tag": "proxyDns", "address": "tls://8.8.8.8", "detour": "proxy"},
+        {"tag": "dns-remote", "address": "tls://8.8.8.8", "detour": "✈️ Proxy"},
         {
-            "tag": "localDns",
+            "tag": "dns-direct",
             "address": "https://223.5.5.5/dns-query",
             "detour": "direct",
         },
@@ -191,24 +191,33 @@ dns_settings = {
         if not use_zju
         else [
             {
-                "tag": "zjuDns",
+                # zju 所用的dns
+                "tag": "dns-zju",
                 "address": zju_dns,
                 "detour": "direct",
             },
         ]
     )
     + [
-        {"tag": "block", "address": "rcode://success"},
-        {"tag": "remote", "address": "fakeip", "detour": "proxy"},
+        {"tag": "dns-block", "address": "rcode://success"},
+        {"tag": "dns-fakeip", "address": "fakeip"},
     ],
     "rules": [
-        {"domain": ["ghproxy.com", "cdn.jsdelivr.net"], "server": "localDns"},
+        {"domain": ["ghproxy.com", "cdn.jsdelivr.net"], "server": "dns-direct"},
+        {"domain_suffix": ["globalssh.cn", "open.ga"], "server": "dns-direct"},
         {
             "geosite": "category-ads-all",
-            "server": "block",
+            # 追踪域名DNS解析被黑洞
+            "domain_suffix": [
+                "appcenter.ms",
+                "app-measurement.com",
+                "firebase.io",
+                "crashlytics.com",
+                "google-analytics.com",
+            ],
+            "server": "dns-block",
             "disable_cache": True,
         },
-        {"outbound": "any", "server": "localDns", "disable_cache": True},
     ]
     + (
         []
@@ -216,18 +225,16 @@ dns_settings = {
         else [
             {
                 "domain_suffix": zju_domains,
-                "server": "zjuDns",
+                "server": "dns-zju",
             },
         ]
     )
     + [
-        {"geosite": ["cn", "private", "category-games@cn"], "server": "localDns"},
-        {"clash_mode": "direct", "server": "localDns"},
-        {"clash_mode": "global", "server": "proxyDns"},
-        {"geosite": "geolocation-!cn", "server": "proxyDns"},
-        {"query_type": ["A", "AAAA"], "server": "remote"},
+        {"outbound": "any", "server": "dns-direct"},
+        {"query_type": ["A", "AAAA"], "server": "dns-fakeip"},
         # {"outbound": ["any"], "server": "remote"},
     ],
+    "final": "dns-remote",
     "fakeip": {
         "enabled": True,
         "inet4_range": "198.18.0.0/15",
@@ -239,11 +246,10 @@ dns_settings = {
 inbounds_settings = [
     {
         "type": "tun",
+        "tag": "tun0",
         "inet4_address": "172.19.0.1/30",
         **({"inet6_range": "fdfd:9527::1/32"} if args.six else {}),
-        "mtu": 9000,
         "auto_route": True,
-        "strict_route": True,
         "sniff": True,
         "endpoint_independent_nat": False,
         "stack": "system",
@@ -259,7 +265,7 @@ inbounds_settings = [
 
 outbounds_settings = [
     {
-        "tag": "proxy",
+        "tag": "✈️ Proxy",
         "type": "selector",
         "outbounds": (["高速节点"] if high_speed is not None else [])
         + ["auto", "地区选择", "节点选择", "direct"],
@@ -267,51 +273,52 @@ outbounds_settings = [
     {
         "tag": "广告过滤",
         "type": "selector",
-        "outbounds": ["block", "direct"],
+        "outbounds": ["block", "direct", "✈️ Proxy"],
+        "default": "block",
     },
     {
         "tag": "学术",
         "type": "selector",
-        "outbounds": ["proxy", "节点选择", "direct"],
+        "outbounds": ["✈️ Proxy", "节点选择", "direct"],
     },
     {
         "tag": "OpenAI",
         "type": "selector",
         "outbounds": [
             "美国",
-            "proxy",
+            "✈️ Proxy",
         ],
     },
     {
         "tag": "Developer",
         "type": "selector",
         "outbounds": [
-            "proxy",
+            "✈️ Proxy",
             "direct",
         ],
     },
     {
         "tag": "OneDrive",
         "type": "selector",
-        "outbounds": ["auto", "proxy", "direct"],
+        "outbounds": ["auto", "✈️ Proxy", "direct"],
     },
     {
         "tag": "Microsoft",
         "type": "selector",
         "outbounds": [
             "direct",
-            "proxy",
+            "✈️ Proxy",
         ],
     },
     {
         "tag": "Social",
         "type": "selector",
-        "outbounds": ["auto", "proxy", "direct"],
+        "outbounds": ["auto", "✈️ Proxy", "direct"],
     },
     {
         "tag": "Shopping",
         "type": "selector",
-        "outbounds": ["proxy", "direct"],
+        "outbounds": ["✈️ Proxy", "direct"],
     },
     {
         "tag": "哔哩哔哩",
@@ -320,7 +327,7 @@ outbounds_settings = [
             "direct",
             "台湾",
             "香港",
-            "proxy",
+            "✈️ Proxy",
         ],
     },
     {
@@ -329,7 +336,7 @@ outbounds_settings = [
         "outbounds": [
             "台湾",
             "香港",
-            "proxy",
+            "✈️ Proxy",
         ],
     },
     {
@@ -337,7 +344,7 @@ outbounds_settings = [
         "type": "selector",
         "outbounds": [
             "direct",
-            "proxy",
+            "✈️ Proxy",
         ],
     },
     {
@@ -347,30 +354,38 @@ outbounds_settings = [
             "日本",
             "香港",
             "台湾",
-            "proxy",
+            "✈️ Proxy",
             "direct",
         ],
     },
     {
         "tag": "Streaming",
         "type": "selector",
-        "outbounds": ["auto", "proxy", "direct"],
+        "outbounds": ["auto", "✈️ Proxy", "direct"],
     },
     {
         "tag": "Google",
         "type": "selector",
-        "outbounds": ["proxy", "direct"],
+        "outbounds": ["✈️ Proxy", "direct"],
     },
-    {"tag": "Speedtest", "type": "selector", "outbounds": ["direct", "proxy"]},
-    {"tag": "not cn", "type": "selector", "outbounds": ["proxy", "direct"]},
-    {"type": "direct", "tag": "direct"},
-    {"type": "dns", "tag": "dns-out"},
+    {"tag": "Speedtest", "type": "selector", "outbounds": ["direct", "✈️ Proxy"]},
+    {
+        "type": "selector",
+        "tag": "🎯 direct",
+        "outbounds": ["direct", "block", "✈️ Proxy"],
+        "default": "direct",
+    },
+    {
+        "type": "direct",
+        "tag": "direct",
+    },
+    {"type": "dns", "tag": "dns"},
     {"type": "block", "tag": "block"},
 ]
 
 route_settings = {
     "auto_detect_interface": True,
-    "final": "proxy",
+    "final": "✈️ Proxy",
     "geoip": {
         "download_url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geoip.db",
         "download_detour": "direct",
@@ -380,6 +395,8 @@ route_settings = {
         "download_detour": "direct",
     },
     "rules": [
+        {"clash_mode": "global", "outbound": "✈️ Proxy"},
+        {"clash_mode": "direct", "outbound": "🎯 direct"},
         {
             "type": "logical",
             "mode": "or",
@@ -389,12 +406,10 @@ route_settings = {
                     "port": [53],
                 }
             ],
-            "outbound": "dns-out",
+            "outbound": "dns",
         },
         {"network": "udp", "port": 443, "outbound": "block"},
         {"geosite": "category-ads-all", "outbound": "广告过滤"},
-        {"clash_mode": "direct", "outbound": "direct"},
-        {"clash_mode": "global", "outbound": "proxy"},
         {
             "domain": [
                 "clash.razord.top",
@@ -485,7 +500,7 @@ route_settings = {
             ],
             "outbound": "Streaming",
         },
-        {"geosite": "geolocation-!cn", "outbound": "not cn"},
+        {"geosite": ["geolocation-!cn", "tld-!cn"], "outbound": "✈️ Proxy"},
     ]
     + (
         []
@@ -516,9 +531,6 @@ route_settings = {
 
 result_json = {
     "log": log_settings,
-    "dns": dns_settings,
-    "inbounds": inbounds_settings,
-    "outbounds": outbounds_settings,
     "experimental": {
         "clash_api": {
             "external_controller": "127.0.0.1:9090",
@@ -527,6 +539,10 @@ result_json = {
             "store_selected": True,
         }
     },
+    "dns": dns_settings,
+    "inbounds": inbounds_settings,
+    "outbounds": outbounds_settings,
+    "route": route_settings,
 }
 
 single_selecor = {
