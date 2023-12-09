@@ -48,7 +48,6 @@ def process_proxy(proxy):
             "server": "",
             "server_port": "",
             "password": "",
-            "tls":
         }
         result = copy.deepcopy(trojan_server_base)
         result["tag"] = proxy["name"]
@@ -263,6 +262,7 @@ inbounds_settings = [
         "inet4_address": "172.19.0.1/30",
         **({"inet6_range": "fdfd:9527::1/32"} if args.six else {}),
         "auto_route": True,
+        "strict_route": True,
         "sniff": True,
         "endpoint_independent_nat": False,
         "stack": "system",
@@ -638,23 +638,13 @@ rule_set = [
 ]
 
 route_settings = {
-    "auto_detect_interface": True,
+    # "auto_detect_interface": true, 如果您是Linux、Windows 和 macOS用户，请将此条注释撤销，使 final 其生效，以免造成问题（上一行记得加,）
     "final": "proxy",
     "rule_set": rule_set,
     "rules": [
         {"clash_mode": "global", "outbound": "proxy"},
         {"clash_mode": "direct", "outbound": "Direct"},
-        {
-            "type": "logical",
-            "mode": "or",
-            "rules": [
-                {
-                    "protocol": "dns",
-                    "port": [53],
-                }
-            ],
-            "outbound": "dns",
-        },
+        {"protocol": "dns", "outbound": "dns"},
         {"network": "udp", "port": 443, "outbound": "block"},
         {"rule_set": "geosite-category-ads-all", "outbound": "广告过滤"},
         {
