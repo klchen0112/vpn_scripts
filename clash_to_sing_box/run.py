@@ -285,6 +285,11 @@ rules_with_rule_set = {
         ],
     },
     "ZJU": {"own": ["zju"], "outbound": "🎯 Direct"},
+    "󰊭 Google CN": {
+        "type": "selector",
+        "geosite": ["google@cn"],
+        "outbound": ["🎯 Direct",global_detour, ],
+    },
     "󰊭 Google": {
         "type": "selector",
         "geosite": ["google"],
@@ -313,9 +318,33 @@ rules_with_rule_set = {
             "🎯 Direct",
         ],
     },
+    "Ⓜ️ Microsoft CN": {
+        "type": "selector",
+        "geosite": ["microsoft@cn"],
+        "outbound": [
+            "🎯 Direct",
+            global_detour,
+        ],
+    },
     "Ⓜ️ Microsoft": {
         "type": "selector",
         "geosite": ["microsoft"],
+        "outbound": [
+            global_detour,
+            "🎯 Direct",
+        ],
+    },
+    "🍎 Apple CN" : {
+        "type": "selector",
+        "geosite": ["apple@cn"],
+        "outbound": [
+            "🎯 Direct",
+            global_detour,
+        ],
+    },
+    "🍎 Apple" : {
+        "type": "selector",
+        "geosite": ["apple"],
         "outbound": [
             global_detour,
             "🎯 Direct",
@@ -381,6 +410,7 @@ rules_with_rule_set = {
     "🇨🇳 CNIP": {
         "type": "selector",
         "geoip": ["private", "cn"],
+        "geosite": ["cn"],
         "outbound": [
             "🎯 Direct",
             global_detour,
