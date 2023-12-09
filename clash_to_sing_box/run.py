@@ -48,12 +48,7 @@ def process_proxy(proxy):
             "server": "",
             "server_port": "",
             "password": "",
-            "tls": {
-                "enabled": True,
-                "disable_sni": False,
-                "server_name": "",
-                "insecure": False,
-            },
+            "tls":
         }
         result = copy.deepcopy(trojan_server_base)
         result["tag"] = proxy["name"]
@@ -61,7 +56,21 @@ def process_proxy(proxy):
         result["server_port"] = proxy["port"]
         result["password"] = proxy["password"]
         if "sni" in proxy:
-            result["tls"]["server_name"] = proxy["sni"]
+            result["tls"] = {
+                "enabled": True,
+                "disable_sni": False,
+                "server_name": proxy["sni"],
+                "insecure": False,
+            }
+            if "skip-cert-verify" in proxy:
+                result["tls"]["insecure"] = True
+        if "network" in proxy:
+            result["transport"] = {
+                "type": "ws",
+            }
+        if "udp" in proxy:
+            if not proxy["udp"]:
+                result["network"] = "tcp"
         return result
 
 
@@ -179,7 +188,7 @@ log_settings = {
 }
 dns_settings = {
     "servers": [
-        {"tag": "dns-google-tls", "address": "tls://8.8.8.8", "detour": "✈️ Proxy"},
+        {"tag": "dns-google-tls", "address": "tls://8.8.8.8", "detour": "proxy"},
         {
             "tag": "dns-ali-doh",
             "address": "https://223.5.5.5/dns-query",
@@ -204,7 +213,7 @@ dns_settings = {
     ],
     "rules": [
         {"domain": ["ghproxy.com", "cdn.jsdelivr.net"], "server": "dns-ali-doh"},
-        {"domain_suffix": ["globalssh.cn", "open.ga"], "server": "dns-ali-doh"},
+        {"domain_suffix": ["open.ga", "the-best-airport.com"], "server": "dns-ali-doh"},
         {
             "rule_set": "geosite-category-ads-all",
             # 追踪域名DNS解析被黑洞
@@ -276,7 +285,7 @@ inbounds_settings = [
 
 outbounds_settings = [
     {
-        "tag": "✈️ Proxy",
+        "tag": "proxy",
         "type": "selector",
         "outbounds": (["高速节点"] if high_speed is not None else [])
         + ["auto", "地区选择", "节点选择", "direct"],
@@ -284,52 +293,52 @@ outbounds_settings = [
     {
         "tag": "广告过滤",
         "type": "selector",
-        "outbounds": ["block", "direct", "✈️ Proxy"],
+        "outbounds": ["block", "direct", "proxy"],
         "default": "block",
     },
     {
         "tag": "学术",
         "type": "selector",
-        "outbounds": ["✈️ Proxy", "节点选择", "direct"],
+        "outbounds": ["proxy", "节点选择", "direct"],
     },
     {
         "tag": "OpenAI",
         "type": "selector",
         "outbounds": [
             "美国",
-            "✈️ Proxy",
+            "proxy",
         ],
     },
     {
         "tag": "Developer",
         "type": "selector",
         "outbounds": [
-            "✈️ Proxy",
+            "proxy",
             "direct",
         ],
     },
     {
         "tag": "OneDrive",
         "type": "selector",
-        "outbounds": ["auto", "✈️ Proxy", "direct"],
+        "outbounds": ["auto", "proxy", "direct"],
     },
     {
         "tag": "Microsoft",
         "type": "selector",
         "outbounds": [
             "direct",
-            "✈️ Proxy",
+            "proxy",
         ],
     },
     {
         "tag": "Social",
         "type": "selector",
-        "outbounds": ["auto", "✈️ Proxy", "direct"],
+        "outbounds": ["auto", "proxy", "direct"],
     },
     {
         "tag": "Shopping",
         "type": "selector",
-        "outbounds": ["✈️ Proxy", "direct"],
+        "outbounds": ["proxy", "direct"],
     },
     {
         "tag": "哔哩哔哩",
@@ -338,7 +347,7 @@ outbounds_settings = [
             "direct",
             "台湾",
             "香港",
-            "✈️ Proxy",
+            "proxy",
         ],
     },
     {
@@ -347,7 +356,7 @@ outbounds_settings = [
         "outbounds": [
             "台湾",
             "香港",
-            "✈️ Proxy",
+            "proxy",
         ],
     },
     {
@@ -355,7 +364,7 @@ outbounds_settings = [
         "type": "selector",
         "outbounds": [
             "direct",
-            "✈️ Proxy",
+            "proxy",
         ],
     },
     {
@@ -365,25 +374,25 @@ outbounds_settings = [
             "日本",
             "香港",
             "台湾",
-            "✈️ Proxy",
+            "proxy",
             "direct",
         ],
     },
     {
         "tag": "Streaming",
         "type": "selector",
-        "outbounds": ["auto", "✈️ Proxy", "direct"],
+        "outbounds": ["auto", "proxy", "direct"],
     },
     {
         "tag": "Google",
         "type": "selector",
-        "outbounds": ["✈️ Proxy", "direct"],
+        "outbounds": ["proxy", "direct"],
     },
-    {"tag": "Speedtest", "type": "selector", "outbounds": ["direct", "✈️ Proxy"]},
+    {"tag": "Speedtest", "type": "selector", "outbounds": ["direct", "proxy"]},
     {
         "type": "selector",
-        "tag": "🎯 direct",
-        "outbounds": ["direct", "block", "✈️ Proxy"],
+        "tag": "Direct",
+        "outbounds": ["direct", "block", "proxy"],
         "default": "direct",
     },
     {
@@ -399,182 +408,182 @@ rule_set = [
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-ads-all.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-category-scholar-!cn",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-scholar-!cn.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-openai",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-openai.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-category-dev-cn",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-dev-cn.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-category-container",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-container.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-google",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-google.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-social-media-cn",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-social-media-cn.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-social-media-!cn",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-social-media-!cn.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-amazon",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-amazon.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-apple",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-apple.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-microsoft",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-microsoft.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-category-games@cn",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-games@cn.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-category-games",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-games.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-bilibili",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-bilibili.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-bahamut",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-bahamut.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-tiktok",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-tiktok.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-youtube",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-youtube.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-netflix",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-netflix.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-hbo",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-hbo.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-disney",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-disney.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-primevideo",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-primevideo.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-category-media",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-media.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-category-entertainment",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-entertainment.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-geolocation-!cn",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-geolocation-!cn.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-tld-!cn",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-tld-!cn.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geosite-cn",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cn.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     # finished geosite
     {
@@ -582,59 +591,59 @@ rule_set = [
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-google.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geoip-telegram",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-telegram.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geoip-twitter",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-twitter.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geoip-facebook",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-facebook.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geoip-netflix",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-netflix.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geoip-private",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-private.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
     {
         "tag": "geoip-cn",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-cn.srs",
-        "download_detour": "✈️ Proxy",
+        "download_detour": "proxy",
     },
 ]
 
 route_settings = {
     "auto_detect_interface": True,
-    "final": "✈️ Proxy",
+    "final": "proxy",
     "rule_set": rule_set,
     "rules": [
-        {"clash_mode": "global", "outbound": "✈️ Proxy"},
-        {"clash_mode": "direct", "outbound": "🎯 direct"},
+        {"clash_mode": "global", "outbound": "proxy"},
+        {"clash_mode": "direct", "outbound": "Direct"},
         {
             "type": "logical",
             "mode": "or",
@@ -703,13 +712,16 @@ route_settings = {
             "rule_set": ["geosite-category-dev", "geosite-category-container"],
             "outbound": "Developer",
         },
-        {"geosite": ["google"], "outbound": "Google"},
+        {"rule_set": ["geosite-google"], "outbound": "Google"},
         {
-            "geosite": ["category-social-media-cn"],
+            "rule_set": ["geosite-category-social-media-cn"],
             "outbound": "direct",
         },
         {
-            "geosite": ["category-social-media-!cn", "category-communication"],
+            "rule_set": [
+                "geosite-category-social-media-!cn",
+                "geosite-category-communication",
+            ],
             "outbound": "Social",
         },
         {"rule_set": "geosite-amazon", "outbound": "Shopping"},
@@ -738,7 +750,10 @@ route_settings = {
             ],
             "outbound": "Streaming",
         },
-        {"geosite": ["geosite-geolocation-!cn", "tld-!cn"], "outbound": "✈️ Proxy"},
+        {
+            "rule_set": ["geosite-geolocation-!cn", "geosite-tld-!cn"],
+            "outbound": "proxy",
+        },
     ]
     + (
         []
