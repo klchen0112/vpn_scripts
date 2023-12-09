@@ -147,17 +147,33 @@ def get_route_rules(rule_config):
         if key == global_detour:
             continue
         if "clash_mode" in value:
+            outbound = value["outbound"]
+            if not (
+                isinstance(outbound, str)
+                or (
+                    isinstance(outbound, list)
+                    and len(outbound) == 1
+                    and isinstance(outbound[0], str)
+                )
+            ):
+                raise ValueError(f"{key} {value}")
             route_rules.append(
-                {"clash_mode": value["clash_mode"], "outbound": value["outbound"]}
+                {"clash_mode": value["clash_mode"], "outbound": outbound}
             )
             continue
         elif "geosite" in value or "geoip" in value or "own" in value:
             rule_set = []
+            outbound = value["outbound"]
             for rule_type in rule_types:
                 if rule_type in value:
                     for name in value[rule_type]:
                         rule_set.append(f"{rule_type}-{name}")
-            route_rules.append({"rule_set": rule_set, "outbound": value["outbound"]})
+            route_rules.append(
+                {
+                    "rule_set": rule_set,
+                    "outbound": key if isinstance(outbound, list) else outbound,
+                }
+            )
     return route_rules
 
 
@@ -205,6 +221,8 @@ def get_outbounds(rule_config, place_outbound):
             continue
         if "clash_mode" in value:
             continue
+        if "type" not in value:
+            continue
         if value["type"] in ["direct", "dns", "block"]:
             outbounds.append({"tag": key, "type": value["type"]})
         elif value["type"] == "selector":
@@ -224,6 +242,7 @@ def get_outbounds(rule_config, place_outbound):
     return outbounds
 
 
+# 如果 outbound不为1那么就流量转自key
 rules_with_rule_set = {
     global_detour: {
         "type": "selector",
@@ -245,55 +264,70 @@ rules_with_rule_set = {
     " Dev-CN": {
         "type": "selector",
         "geosite": ["category-dev-cn"],
-        "outbound": "🎯 Direct",
+        "outbound": ["🎯 Direct", global_detour],
     },
     " Dev-Global": {
         "type": "selector",
         "geosite": ["category-dev", "category-container"],
-        "outbound": " Dev-Global",
+        "outbound": [" Dev-Global", "🎯 Direct"],
     },
     "Schoolar CN": {
         "type": "selector",
         "geosite": ["category-scholar-cn", "category-education-cn"],
-        "outbound": "🎯 Direct",
+        "outbound": ["🎯 Direct", global_detour],
     },
     "󰑴 Schoolar Global": {
         "type": "selector",
         "geosite": ["category-scholar-!cn"],
-        "outbound": "󰑴 Schoolar Global",
+        "outbound": [
+            global_detour,
+            "🎯 Direct",
+        ],
     },
-    "ZJU": {"type": "selector", "own": ["zju"], "outbound": "🎯 Direct"},
+    "ZJU": {"own": ["zju"], "outbound": "🎯 Direct"},
     "󰊭 Google": {
         "type": "selector",
         "geosite": ["google"],
         "geoip": ["google"],
-        "outbound": ["󰊭 Google"],
+        "outbound": [global_detour, "🎯 Direct"],
     },
     "Social Media CN": {
         "type": "selector",
         "geosite": ["category-social-media-cn"],
-        "outbound": "🎯 Direct",
+        "outbound": ["🎯 Direct", global_detour],
     },
     " Social Media Global": {
         "type": "selector",
         "geosite": ["category-social-media-!cn", "category-communication"],
         "geoip": ["telegram", "twitter", "facebook"],
-        "outbound": " Social Media Global",
+        "outbound": [
+            global_detour,
+            "🎯 Direct",
+        ],
     },
     "󰒚 Shopping": {
         "type": "selector",
         "geosite": ["amazon"],
-        "outbound": ["󰒚 Shopping"],
+        "outbound": [
+            global_detour,
+            "🎯 Direct",
+        ],
     },
     "Ⓜ️ Microsoft": {
         "type": "selector",
-        "geosite": ["amazon"],
-        "outbound": ["Ⓜ️ Microsoft"],
+        "geosite": ["microsoft"],
+        "outbound": [
+            global_detour,
+            "🎯 Direct",
+        ],
     },
     "Game CN": {
         "type": "selector",
         "geosite": ["category-games@cn"],
-        "outbound": ["🎯 Direct"],
+        "outbound": [
+            "🎯 Direct",
+            global_detour,
+        ],
     },
     "󱎓 Game Global": {
         "type": "selector",
@@ -303,17 +337,26 @@ rules_with_rule_set = {
     "哔哩哔哩": {
         "type": "selector",
         "geosite": ["bilibili"],
-        "outbound": ["哔哩哔哩"],
+        "outbound": [
+            "🎯 Direct",
+            global_detour,
+        ],
     },
     "巴哈姆特": {
         "type": "selector",
         "geosite": ["bahamut"],
-        "outbound": ["巴哈姆特"],
+        "outbound": [
+            global_detour,
+            "🎯 Direct",
+        ],
     },
     "国内流媒体": {
         "type": "selector",
         "geosite": ["category-media-cn"],
-        "outbound": ["🎯 Direct"],
+        "outbound": [
+            "🎯 Direct",
+            global_detour,
+        ],
     },
     "󰝆 海外流媒体": {
         "type": "selector",
@@ -322,17 +365,26 @@ rules_with_rule_set = {
             "category-media",
             "category-entertainment",
         ],
-        "outbound": ["󰝆 海外流媒体"],
+        "outbound": [
+            global_detour,
+            "🎯 Direct",
+        ],
     },
     " Global": {
         "type": "selector",
         "geosite": ["geolocation-!cn", "tld-!cn"],
-        "outbound": [global_detour],
+        "outbound": [
+            global_detour,
+            "🎯 Direct",
+        ],
     },
     "🇨🇳 CNIP": {
         "type": "selector",
         "geoip": ["private", "cn"],
-        "outbound": ["🎯 Direct"],
+        "outbound": [
+            "🎯 Direct",
+            global_detour,
+        ],
     },
 }
 
