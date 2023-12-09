@@ -260,7 +260,7 @@ rules_with_rule_set = {
         "geosite": ["category-ads-all"],
         "outbound": "🛑 block",
     },
-    "🤖 OpenAI": {"type": "selector", "geosite": ["openai"], "outbound": "🤖 OpenAI"},
+    "🤖 OpenAI": {"type": "selector", "geosite": ["openai"], "outbound": ["美国",global_detour,"🎯 Direct"]},
     " Dev-CN": {
         "type": "selector",
         "geosite": ["category-dev-cn"],
@@ -269,7 +269,7 @@ rules_with_rule_set = {
     " Dev-Global": {
         "type": "selector",
         "geosite": ["category-dev", "category-container"],
-        "outbound": [" Dev-Global", "🎯 Direct"],
+        "outbound": [global_detour, "🎯 Direct"],
     },
     "Schoolar CN": {
         "type": "selector",
@@ -288,7 +288,10 @@ rules_with_rule_set = {
     "󰊭 Google CN": {
         "type": "selector",
         "geosite": ["google@cn"],
-        "outbound": ["🎯 Direct",global_detour, ],
+        "outbound": [
+            "🎯 Direct",
+            global_detour,
+        ],
     },
     "󰊭 Google": {
         "type": "selector",
@@ -334,7 +337,7 @@ rules_with_rule_set = {
             "🎯 Direct",
         ],
     },
-    "🍎 Apple CN" : {
+    "🍎 Apple CN": {
         "type": "selector",
         "geosite": ["apple@cn"],
         "outbound": [
@@ -342,7 +345,7 @@ rules_with_rule_set = {
             global_detour,
         ],
     },
-    "🍎 Apple" : {
+    "🍎 Apple": {
         "type": "selector",
         "geosite": ["apple"],
         "outbound": [
@@ -490,7 +493,6 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
                     "domain": ["ghproxy.com", "cdn.jsdelivr.net"],
                     "server": "dns-ali-doh",
                 },
-                {"domain_suffix": [], "server": "dns-ali-doh"},
                 {
                     "rule_set": "geosite-category-ads-all",
                     # 追踪域名DNS解析被黑洞
@@ -516,11 +518,9 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
                 ]
             )
             + [
-                {"outbound": "any", "server": "dns-ali-doh", "disable_cache": True},
-                {"rule_set": "geosite-cn", "server": "dns-ali-doh"},
+                {"outbound": "any", "server": "dns-ali-doh"},
                 {"clash_mode": "direct", "server": "dns-ali-doh"},
                 {"clash_mode": "global", "server": "dns-google-tls"},
-                {"rule_set": "geosite-geolocation-!cn", "server": "dns-google-tls"},
                 {"query_type": ["A", "AAAA"], "server": "dns-fakeip"},
                 # {"outbound": ["any"], "server": "remote"},
             ],
