@@ -1,0 +1,11 @@
+{
+    "version": "20231209",
+    "rules": [
+        {
+            "domain_suffix": [
+                "open.ga",
+                "the-best-airport.com"
+            ]
+        }
+    ]
+}
