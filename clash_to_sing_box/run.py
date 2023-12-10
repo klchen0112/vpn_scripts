@@ -92,6 +92,9 @@ place_back = [
     "印度",
     "意大利",
     "埃及",
+    "马来西亚" "巴基斯坦",
+    "智利",
+    "哥伦比亚",
 ]
 
 zju_dns = "10.10.0.21"
@@ -108,7 +111,7 @@ global_detour = "✈️ Proxy"
 
 def get_rule_set_url(rule_type: str, name: str):
     if rule_type == "own":
-        url = f"https://raw.githubusercontent.com/klchen0112/vpn_scripts/master/singbox/{name}.srs"
+        url = f"https://raw.githubusercontent.com/klchen0112/vpn_scripts/master/singbox/{name}.json"
     elif rule_type == "geosite":
         url = f"https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-{name}.srs"
     elif rule_type == "geoip":
@@ -174,6 +177,10 @@ def get_route_rules(rule_config):
                     "rule_set": rule_set,
                     "outbound": outbound,
                 }
+            )
+        elif "ip_is_private" in value:
+            route_rules.append(
+                {"ip_is_private": value["ip_is_private"], "outbound": value["outbound"]}
             )
     return route_rules
 
@@ -262,6 +269,7 @@ rules_with_rule_set = {
     "direct": {"type": "direct"},
     "dns": {"type": "dns"},
     "block": {"type": "block"},
+    "ip_is_private": {"ip_is_private": True, "outbound": "direct"},
     "🎯 Direct": {
         "type": "selector",
         "outbounds": ["direct", global_detour],
@@ -311,7 +319,10 @@ rules_with_rule_set = {
         ],
         "default": global_detour,
     },
-    "ZJU": {"own": ["zju"], "outbounds": ["🎯 Direct"], "default": "🎯 Direct"},
+    "ZJU": {
+        "own": ["zju"],
+        "outbound": "🎯 Direct",
+    },
     "󰊭 Google CN": {
         "type": "selector",
         "geosite": ["google@cn"],
@@ -324,7 +335,7 @@ rules_with_rule_set = {
     "󰊭 Google": {
         "type": "selector",
         "geosite": ["google"],
-        "geoip": ["google"],
+        # "geoip": ["google"],
         "outbounds": [global_detour, "🎯 Direct"],
         "default": global_detour,
     },
@@ -337,7 +348,7 @@ rules_with_rule_set = {
     " Social Media Global": {
         "type": "selector",
         "geosite": ["category-social-media-!cn", "category-communication"],
-        "geoip": ["telegram", "twitter", "facebook"],
+        # "geoip": ["telegram", "twitter", "facebook"],
         "outbounds": [
             global_detour,
             "🎯 Direct",
@@ -437,7 +448,7 @@ rules_with_rule_set = {
     },
     "󰝆 海外流媒体": {
         "type": "selector",
-        "geoip": ["netflix"],
+        # "geoip": ["netflix"],
         "geosite": [
             "category-media",
             "category-entertainment",
@@ -459,7 +470,7 @@ rules_with_rule_set = {
     },
     "🇨🇳 CNIP": {
         "type": "selector",
-        "geoip": ["private", "cn"],
+        "geoip": ["cn"],
         "geosite": ["cn"],
         "outbounds": [
             "🎯 Direct",
@@ -566,10 +577,11 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
                 ]
             )
             + [
+                {"query_type": ["A", "AAAA"], "rewrite_ttl": 1, "server": "dns-fakeip"},
                 {"outbound": "any", "server": "dns-ali-doh"},
                 {"clash_mode": "direct", "server": "dns-ali-doh"},
                 {"clash_mode": "global", "server": "dns-google-tls"},
-                {"query_type": ["A", "AAAA"], "server": "dns-fakeip"},
+                {"rule_set": "geosite-cn", "server": "dns-ali-doh"}
                 # {"outbound": ["any"], "server": "remote"},
             ],
             "final": "dns-google-tls",
