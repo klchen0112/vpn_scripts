@@ -99,7 +99,8 @@ proxy-groups:
   - name: 节点选择
     type: select # 手动代理组
     use:
-      - BITZ
+      - AT1
+      - AT2
 
   - name: 外服游戏
     type: select
@@ -194,7 +195,8 @@ proxy-groups:
     # interval: 300 # 测ping时间(秒)
     lazy: true
     use:
-      - BITZ
+      - AT1
+      - AT2
 
   - name: OpenAI
     type: select # 手动代理组
@@ -230,13 +232,15 @@ proxy-groups:
     interval: 300 # 测ping时间(秒)
     lazy: true
     use:
-      - BITZ
+      - AT1
+      - AT2
     filter: "香港"
   - name: 日本
     type: load-balance
     strategy: consistent-hashing
     use:
-      - BITZ
+      - AT1
+      - AT2
     filter: "日本"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
@@ -246,7 +250,8 @@ proxy-groups:
     type: load-balance
     strategy: consistent-hashing
     use:
-      - BITZ
+      - AT1
+      - AT2
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
     interval: 300 # 测ping时间(秒)
@@ -256,7 +261,8 @@ proxy-groups:
     type: load-balance
     strategy: consistent-hashing
     use:
-      - BITZ
+      - AT1
+      - AT2
     filter: "台湾"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
@@ -267,7 +273,8 @@ proxy-groups:
     type: load-balance
     strategy: consistent-hashing
     use:
-      - BITZ
+      - AT1
+      - AT2
     filter: "美国"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
@@ -277,7 +284,8 @@ proxy-groups:
     type: load-balance
     strategy: consistent-hashing
     use:
-      - BITZ
+      - AT1
+      - AT2
     filter: "韩国"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
@@ -287,7 +295,8 @@ proxy-groups:
     type: load-balance
     strategy: consistent-hashing
     use:
-      - BITZ
+      - AT1
+      - AT2
     filter: "英国"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
@@ -297,7 +306,8 @@ proxy-groups:
     type: load-balance
     strategy: consistent-hashing
     use:
-      - BITZ
+      - AT1
+      - AT2
     filter: "俄罗斯"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
@@ -307,7 +317,8 @@ proxy-groups:
     type: load-balance
     strategy: consistent-hashing
     use:
-      - BITZ
+      - AT1
+      - AT2
     filter: "法国"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
@@ -317,7 +328,8 @@ proxy-groups:
     type: load-balance
     strategy: consistent-hashing
     use:
-      - BITZ
+      - AT1
+      - AT2
     filter: "德国"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
@@ -327,7 +339,8 @@ proxy-groups:
     type: load-balance
     strategy: consistent-hashing
     use:
-      - BITZ
+      - AT1
+      - AT2
     filter: "澳大利亚"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
@@ -337,7 +350,8 @@ proxy-groups:
     type: load-balance
     strategy: consistent-hashing
     use:
-      - BITZ
+      - AT1
+      - AT2
     filter: "菲律宾"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
@@ -347,7 +361,8 @@ proxy-groups:
     type: load-balance
     strategy: consistent-hashing
     use:
-      - BITZ
+      - AT1
+      - AT2
     filter: "土耳其"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
@@ -357,7 +372,8 @@ proxy-groups:
     type: load-balance
     strategy: consistent-hashing
     use:
-      - BITZ
+      - AT1
+      - AT2
     filter: "阿根廷"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
@@ -366,7 +382,8 @@ proxy-groups:
   - name: 乌克兰
     type: select
     use:
-      - BITZ
+      - AT1
+      - AT2
     filter: "乌克兰"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
@@ -376,7 +393,8 @@ proxy-groups:
     type: load-balance
     strategy: consistent-hashing
     use:
-      - BITZ
+      - AT1
+      - AT2
     filter: "巴西"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
@@ -385,7 +403,8 @@ proxy-groups:
     type: load-balance
     strategy: consistent-hashing
     use:
-      - BITZ
+      - AT1
+      - AT2
     filter: "印度"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
@@ -397,17 +416,26 @@ proxy-groups:
       - Proxy
       - DIRECT
 proxy-providers:
-  BITZ:
+  AT1:
     type: http
-    url: "你的订阅连接"
+    url: "订阅链接1"
     interval: 86400
-    path: ./bitz.yaml
+    path: ./AT1.yaml
     health-check:
       enable: true
       interval: 600
       lazy: true
       url: https://cp.cloudflare.com/generate_204
-
+  AT2:
+    type: http
+    url: "订阅链接2"
+    interval: 86400
+    path: ./AT2.yaml
+    health-check:
+      enable: true
+      interval: 600
+      lazy: true
+      url: https://cp.cloudflare.com/generate_204
 rules:
   - GEOIP,LAN,DIRECT,no-resolve
   - DOMAIN-SUFFIX,tpddns.cn,DIRECT
