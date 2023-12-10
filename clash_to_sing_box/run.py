@@ -120,6 +120,7 @@ def get_rule_set_url(rule_type: str, name: str):
         "type": "remote",
         "url": url,
         "download_detour": global_detour,
+        "format": "source" if rule_type == "own" else "binary",
     }
 
 
@@ -163,7 +164,7 @@ def get_route_rules(rule_config):
             continue
         elif "geosite" in value or "geoip" in value or "own" in value:
             rule_set = []
-            outbound = value["outbound"]
+            outbound = value["outbound"] if "outbound" in value else key
             for rule_type in rule_types:
                 if rule_type in value:
                     for name in value[rule_type]:
@@ -171,7 +172,7 @@ def get_route_rules(rule_config):
             route_rules.append(
                 {
                     "rule_set": rule_set,
-                    "outbound": key if isinstance(outbound, list) else outbound,
+                    "outbound": outbound,
                 }
             )
     return route_rules
@@ -191,7 +192,7 @@ def get_outbounds(rule_config, place_outbound):
                 {
                     "tag": key,
                     "type": "selector",
-                    "outbound": value["outbound"],
+                    "outbounds": value["outbounds"],
                 }
             )
             outbounds.append(
@@ -226,8 +227,9 @@ def get_outbounds(rule_config, place_outbound):
         if value["type"] in ["direct", "dns", "block"]:
             outbounds.append({"tag": key, "type": value["type"]})
         elif value["type"] == "selector":
+            # print(key)
             outbounds.append(
-                {"tag": key, "type": "selector", "outbounds": value["outbound"]}
+                {"tag": key, "type": "selector", "outbounds": value["outbounds"]}
             )
     for name, place_outbounds in place_outbound.items():
         url_place = copy.deepcopy(url_test_base)
@@ -246,49 +248,53 @@ def get_outbounds(rule_config, place_outbound):
 rules_with_rule_set = {
     global_detour: {
         "type": "selector",
-        "outbound": ["地区测速", "地区选择", "节点选择", "🎯 Direct"],
+        "outbounds": ["地区测速", "地区选择", "节点选择", "🎯 Direct"],
     },
     "clash_global": {"clash_mode": "global", "outbound": global_detour},
     "clash_direct": {"clash_mode": "direct", "outbound": "🎯 Direct"},
     "direct": {"type": "direct"},
     "dns": {"type": "dns"},
     "block": {"type": "block"},
-    "🎯 Direct": {"type": "selector", "outbound": ["direct", "proxy"]},
-    "🛑 Block": {"type": "selector", "outbound": ["block", "direct", "proxy"]},
+    "🎯 Direct": {"type": "selector", "outbounds": ["direct", "proxy"]},
+    "🛑 Block": {"type": "selector", "outbounds": ["block", "direct", "proxy"]},
     "󱤫 广告过滤": {
         "type": "selector",
         "geosite": ["category-ads-all"],
-        "outbound": "🛑 block",
+        "outbounds": ["🛑 block", "🎯 Direct"],
     },
-    "🤖 OpenAI": {"type": "selector", "geosite": ["openai"], "outbound": ["美国",global_detour,"🎯 Direct"]},
+    "🤖 OpenAI": {
+        "type": "selector",
+        "geosite": ["openai"],
+        "outbounds": ["美国", global_detour, "🎯 Direct"],
+    },
     " Dev-CN": {
         "type": "selector",
         "geosite": ["category-dev-cn"],
-        "outbound": ["🎯 Direct", global_detour],
+        "outbounds": ["🎯 Direct", global_detour],
     },
     " Dev-Global": {
         "type": "selector",
         "geosite": ["category-dev", "category-container"],
-        "outbound": [global_detour, "🎯 Direct"],
+        "outbounds": [global_detour, "🎯 Direct"],
     },
     "Schoolar CN": {
         "type": "selector",
         "geosite": ["category-scholar-cn", "category-education-cn"],
-        "outbound": ["🎯 Direct", global_detour],
+        "outbounds": ["🎯 Direct", global_detour],
     },
     "󰑴 Schoolar Global": {
         "type": "selector",
         "geosite": ["category-scholar-!cn"],
-        "outbound": [
+        "outbounds": [
             global_detour,
             "🎯 Direct",
         ],
     },
-    "ZJU": {"own": ["zju"], "outbound": "🎯 Direct"},
+    "ZJU": {"own": ["zju"], "outbounds": ["🎯 Direct"]},
     "󰊭 Google CN": {
         "type": "selector",
         "geosite": ["google@cn"],
-        "outbound": [
+        "outbounds": [
             "🎯 Direct",
             global_detour,
         ],
@@ -297,18 +303,18 @@ rules_with_rule_set = {
         "type": "selector",
         "geosite": ["google"],
         "geoip": ["google"],
-        "outbound": [global_detour, "🎯 Direct"],
+        "outbounds": [global_detour, "🎯 Direct"],
     },
     "Social Media CN": {
         "type": "selector",
         "geosite": ["category-social-media-cn"],
-        "outbound": ["🎯 Direct", global_detour],
+        "outbounds": ["🎯 Direct", global_detour],
     },
     " Social Media Global": {
         "type": "selector",
         "geosite": ["category-social-media-!cn", "category-communication"],
         "geoip": ["telegram", "twitter", "facebook"],
-        "outbound": [
+        "outbounds": [
             global_detour,
             "🎯 Direct",
         ],
@@ -316,7 +322,7 @@ rules_with_rule_set = {
     "󰒚 Shopping": {
         "type": "selector",
         "geosite": ["amazon"],
-        "outbound": [
+        "outbounds": [
             global_detour,
             "🎯 Direct",
         ],
@@ -324,7 +330,7 @@ rules_with_rule_set = {
     "Ⓜ️ Microsoft CN": {
         "type": "selector",
         "geosite": ["microsoft@cn"],
-        "outbound": [
+        "outbounds": [
             "🎯 Direct",
             global_detour,
         ],
@@ -332,7 +338,7 @@ rules_with_rule_set = {
     "Ⓜ️ Microsoft": {
         "type": "selector",
         "geosite": ["microsoft"],
-        "outbound": [
+        "outbounds": [
             global_detour,
             "🎯 Direct",
         ],
@@ -340,7 +346,7 @@ rules_with_rule_set = {
     "🍎 Apple CN": {
         "type": "selector",
         "geosite": ["apple@cn"],
-        "outbound": [
+        "outbounds": [
             "🎯 Direct",
             global_detour,
         ],
@@ -348,7 +354,7 @@ rules_with_rule_set = {
     "🍎 Apple": {
         "type": "selector",
         "geosite": ["apple"],
-        "outbound": [
+        "outbounds": [
             global_detour,
             "🎯 Direct",
         ],
@@ -356,7 +362,7 @@ rules_with_rule_set = {
     "Game CN": {
         "type": "selector",
         "geosite": ["category-games@cn"],
-        "outbound": [
+        "outbounds": [
             "🎯 Direct",
             global_detour,
         ],
@@ -364,12 +370,12 @@ rules_with_rule_set = {
     "󱎓 Game Global": {
         "type": "selector",
         "geosite": ["category-games"],
-        "outbound": ["日本", "香港", "台湾", global_detour, "🎯 Direct"],
+        "outbounds": ["日本", "香港", "台湾", global_detour, "🎯 Direct"],
     },
     "哔哩哔哩": {
         "type": "selector",
         "geosite": ["bilibili"],
-        "outbound": [
+        "outbounds": [
             "🎯 Direct",
             global_detour,
         ],
@@ -377,7 +383,7 @@ rules_with_rule_set = {
     "巴哈姆特": {
         "type": "selector",
         "geosite": ["bahamut"],
-        "outbound": [
+        "outbounds": [
             global_detour,
             "🎯 Direct",
         ],
@@ -385,7 +391,7 @@ rules_with_rule_set = {
     "国内流媒体": {
         "type": "selector",
         "geosite": ["category-media-cn"],
-        "outbound": [
+        "outbounds": [
             "🎯 Direct",
             global_detour,
         ],
@@ -397,7 +403,7 @@ rules_with_rule_set = {
             "category-media",
             "category-entertainment",
         ],
-        "outbound": [
+        "outbounds": [
             global_detour,
             "🎯 Direct",
         ],
@@ -405,7 +411,7 @@ rules_with_rule_set = {
     " Global": {
         "type": "selector",
         "geosite": ["geolocation-!cn", "tld-!cn"],
-        "outbound": [
+        "outbounds": [
             global_detour,
             "🎯 Direct",
         ],
@@ -414,7 +420,7 @@ rules_with_rule_set = {
         "type": "selector",
         "geoip": ["private", "cn"],
         "geosite": ["cn"],
-        "outbound": [
+        "outbounds": [
             "🎯 Direct",
             global_detour,
         ],
@@ -560,12 +566,12 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
                 "users": [],
             },
         ],
-        "outbound": get_outbounds(
+        "outbounds": get_outbounds(
             rule_config=rules_with_rule_set, place_outbound=place_outbound
         ),
         "route": {
             # "auto_detect_interface": true, 如果您是Linux、Windows 和 macOS用户，请将此条注释撤销，使 final 其生效，以免造成问题（上一行记得加,）
-            "final": "proxy",
+            "final": global_detour,
             "rule_set": get_rule_set(rules_with_rule_set),
             "rules": get_route_rules(rule_config=rules_with_rule_set),
         },
