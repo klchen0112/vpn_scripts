@@ -193,6 +193,7 @@ def get_outbounds(rule_config, place_outbound):
                     "tag": key,
                     "type": "selector",
                     "outbounds": value["outbounds"],
+                    "default": value["default"],
                 }
             )
             outbounds.append(
@@ -229,7 +230,12 @@ def get_outbounds(rule_config, place_outbound):
         elif value["type"] == "selector":
             # print(key)
             outbounds.append(
-                {"tag": key, "type": "selector", "outbounds": value["outbounds"]}
+                {
+                    "tag": key,
+                    "type": "selector",
+                    "outbounds": value["outbounds"],
+                    "default": value["default"],
+                }
             )
     for name, place_outbounds in place_outbound.items():
         url_place = copy.deepcopy(url_test_base)
@@ -248,39 +254,53 @@ def get_outbounds(rule_config, place_outbound):
 rules_with_rule_set = {
     global_detour: {
         "type": "selector",
-        "outbounds": ["地区测速", "地区选择", "节点选择", "🎯 Direct"],
+        "outbounds": ["地区测速", "地区选择", "节点选择"],
+        "default": "地区测速",
     },
     "clash_global": {"clash_mode": "global", "outbound": global_detour},
     "clash_direct": {"clash_mode": "direct", "outbound": "🎯 Direct"},
     "direct": {"type": "direct"},
     "dns": {"type": "dns"},
     "block": {"type": "block"},
-    "🎯 Direct": {"type": "selector", "outbounds": ["direct", "proxy"]},
-    "🛑 Block": {"type": "selector", "outbounds": ["block", "direct", "proxy"]},
+    "🎯 Direct": {
+        "type": "selector",
+        "outbounds": ["direct", global_detour],
+        "default": "direct",
+    },
+    "🛑 Block": {
+        "type": "selector",
+        "outbounds": ["block", "direct", global_detour],
+        "default": "block",
+    },
     "󱤫 广告过滤": {
         "type": "selector",
         "geosite": ["category-ads-all"],
-        "outbounds": ["🛑 block", "🎯 Direct"],
+        "outbounds": ["🛑 Block", "🎯 Direct"],
+        "default": "🛑 Block",
     },
     "🤖 OpenAI": {
         "type": "selector",
         "geosite": ["openai"],
         "outbounds": ["美国", global_detour, "🎯 Direct"],
+        "default": "美国",
     },
     " Dev-CN": {
         "type": "selector",
         "geosite": ["category-dev-cn"],
         "outbounds": ["🎯 Direct", global_detour],
+        "default": "🎯 Direct",
     },
     " Dev-Global": {
         "type": "selector",
         "geosite": ["category-dev", "category-container"],
         "outbounds": [global_detour, "🎯 Direct"],
+        "default": global_detour,
     },
     "Schoolar CN": {
         "type": "selector",
         "geosite": ["category-scholar-cn", "category-education-cn"],
         "outbounds": ["🎯 Direct", global_detour],
+        "default": "🎯 Direct",
     },
     "󰑴 Schoolar Global": {
         "type": "selector",
@@ -289,8 +309,9 @@ rules_with_rule_set = {
             global_detour,
             "🎯 Direct",
         ],
+        "default": global_detour,
     },
-    "ZJU": {"own": ["zju"], "outbounds": ["🎯 Direct"]},
+    "ZJU": {"own": ["zju"], "outbounds": ["🎯 Direct"], "default": "🎯 Direct"},
     "󰊭 Google CN": {
         "type": "selector",
         "geosite": ["google@cn"],
@@ -298,17 +319,20 @@ rules_with_rule_set = {
             "🎯 Direct",
             global_detour,
         ],
+        "default": "🎯 Direct",
     },
     "󰊭 Google": {
         "type": "selector",
         "geosite": ["google"],
         "geoip": ["google"],
         "outbounds": [global_detour, "🎯 Direct"],
+        "default": global_detour,
     },
     "Social Media CN": {
         "type": "selector",
         "geosite": ["category-social-media-cn"],
         "outbounds": ["🎯 Direct", global_detour],
+        "default": "🎯 Direct",
     },
     " Social Media Global": {
         "type": "selector",
@@ -318,6 +342,7 @@ rules_with_rule_set = {
             global_detour,
             "🎯 Direct",
         ],
+        "default": "🎯 Direct",
     },
     "󰒚 Shopping": {
         "type": "selector",
@@ -326,6 +351,7 @@ rules_with_rule_set = {
             global_detour,
             "🎯 Direct",
         ],
+        "default": global_detour,
     },
     "Ⓜ️ Microsoft CN": {
         "type": "selector",
@@ -334,6 +360,7 @@ rules_with_rule_set = {
             "🎯 Direct",
             global_detour,
         ],
+        "default": "🎯 Direct",
     },
     "Ⓜ️ Microsoft": {
         "type": "selector",
@@ -342,6 +369,7 @@ rules_with_rule_set = {
             global_detour,
             "🎯 Direct",
         ],
+        "default": global_detour,
     },
     "🍎 Apple CN": {
         "type": "selector",
@@ -350,6 +378,7 @@ rules_with_rule_set = {
             "🎯 Direct",
             global_detour,
         ],
+        "default": "🎯 Direct",
     },
     "🍎 Apple": {
         "type": "selector",
@@ -358,6 +387,7 @@ rules_with_rule_set = {
             global_detour,
             "🎯 Direct",
         ],
+        "default": global_detour,
     },
     "Game CN": {
         "type": "selector",
@@ -366,27 +396,35 @@ rules_with_rule_set = {
             "🎯 Direct",
             global_detour,
         ],
+        "default": "🎯 Direct",
     },
     "󱎓 Game Global": {
         "type": "selector",
         "geosite": ["category-games"],
         "outbounds": ["日本", "香港", "台湾", global_detour, "🎯 Direct"],
+        "default": global_detour,
     },
     "哔哩哔哩": {
         "type": "selector",
         "geosite": ["bilibili"],
         "outbounds": [
             "🎯 Direct",
+            "台湾",
+            "香港",
             global_detour,
         ],
+        "default": "🎯 Direct",
     },
     "巴哈姆特": {
         "type": "selector",
         "geosite": ["bahamut"],
         "outbounds": [
+            "台湾",
+            "香港",
             global_detour,
             "🎯 Direct",
         ],
+        "default": "台湾",
     },
     "国内流媒体": {
         "type": "selector",
@@ -395,6 +433,7 @@ rules_with_rule_set = {
             "🎯 Direct",
             global_detour,
         ],
+        "default": "🎯 Direct",
     },
     "󰝆 海外流媒体": {
         "type": "selector",
@@ -407,6 +446,7 @@ rules_with_rule_set = {
             global_detour,
             "🎯 Direct",
         ],
+        "default": global_detour,
     },
     " Global": {
         "type": "selector",
@@ -415,6 +455,7 @@ rules_with_rule_set = {
             global_detour,
             "🎯 Direct",
         ],
+        "default": global_detour,
     },
     "🇨🇳 CNIP": {
         "type": "selector",
@@ -424,6 +465,7 @@ rules_with_rule_set = {
             "🎯 Direct",
             global_detour,
         ],
+        "default": "🎯 Direct",
     },
 }
 
@@ -470,7 +512,7 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
                 {
                     "tag": "dns-google-tls",
                     "address": "tls://8.8.8.8",
-                    "detour": "proxy",
+                    "detour": global_detour,
                 },
                 {
                     "tag": "dns-ali-doh",
