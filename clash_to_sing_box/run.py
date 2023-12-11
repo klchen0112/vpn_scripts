@@ -534,10 +534,13 @@ single_selecor = {
 
 
 with open("mixed.yaml", "r", encoding="utf-8") as file, open(
-    "result{}.json".format("_zju" if use_zju else "_simple" if args.simple else ""), "w", encoding="utf-8"
+    "result{}.json".format("_zju" if use_zju else "_simple" if args.simple else ""),
+    "w",
+    encoding="utf-8",
 ) as result_file:
     if not args.zju:
         rules_with_rule_set.pop("ZJU")
+        simple_version_rules.pop("ZJU")
 
     data = yaml.load(file.read(), Loader=yaml.FullLoader)
     place_outbound = dict()
@@ -639,24 +642,24 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
             # "strategy": "ipv4_only",
         },
         "inbounds": [
-            {
-                "type": "tun",
-                # "tag": "tun0",
-                "inet4_address": "172.19.0.1/30",
-                **({"inet6_range": "fdfd:9527::1/32"} if args.six else {}),
-                "auto_route": True,
-                "strict_route": True,
-                "sniff": True,
-                # "endpoint_independent_nat": False,
-                "stack": "system",
-                # "platform": {
-                #     "http_proxy": {
-                #         "enabled": True,
-                #         "server": "127.0.0.1",
-                #         "server_port": 7890,
-                #     }
-                # },
-            },
+            # {
+            #     "type": "tun",
+            #     # "tag": "tun0",
+            #     "inet4_address": "172.19.0.1/30",
+            #     **({"inet6_range": "fdfd:9527::1/32"} if args.six else {}),
+            #     "auto_route": True,
+            #     "strict_route": True,
+            #     "sniff": True,
+            #     # "endpoint_independent_nat": False,
+            #     "stack": "system",
+            #     # "platform": {
+            #     #     "http_proxy": {
+            #     #         "enabled": True,
+            #     #         "server": "127.0.0.1",
+            #     #         "server_port": 7890,
+            #     #     }
+            #     # },
+            # },
             {
                 "type": "mixed",
                 "listen": "127.0.0.1",
@@ -676,7 +679,11 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
             "rule_set": get_rule_set(
                 simple_version_rules if args.simple else rules_with_rule_set,
             ),
-            "rules": get_route_rules(rule_config=simple_version_rules if args.simple else rules_with_rule_set,),
+            "rules": get_route_rules(
+                rule_config=simple_version_rules
+                if args.simple
+                else rules_with_rule_set,
+            ),
         },
     }
 
