@@ -1,3 +1,2 @@
 mixed.yaml
-result.json
-result_zju.json
+*.json
