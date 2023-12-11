@@ -7,7 +7,7 @@ parser = argparse.ArgumentParser(description="")
 
 parser.add_argument("-z", "--zju", help="wether use zju", action="store_true")
 parser.add_argument("--six", help="ipv6", action="store_true")
-
+parser.add_argument("--simple", help="use simple version", action="store_true")
 args = parser.parse_args()
 
 use_zju = args.zju
@@ -269,7 +269,7 @@ rules_with_rule_set = {
     "direct": {"type": "direct"},
     "dns": {"type": "dns"},
     "block": {"type": "block"},
-    "ip_is_private": {"ip_is_private": True, "outbound": "direct"},
+    "ip_is_private": {"ip_is_private": True, "outbound": "🎯 Direct"},
     "🎯 Direct": {
         "type": "selector",
         "outbounds": ["direct", global_detour],
@@ -479,6 +479,49 @@ rules_with_rule_set = {
         "default": "🎯 Direct",
     },
 }
+simple_version_rules = {
+    global_detour: {
+        "type": "selector",
+        "outbounds": ["地区测速", "地区选择", "节点选择"],
+        "default": "地区测速",
+    },
+    "clash_global": {"clash_mode": "global", "outbound": global_detour},
+    "clash_direct": {"clash_mode": "direct", "outbound": "🎯 Direct"},
+    "direct": {"type": "direct"},
+    "dns": {"type": "dns"},
+    "block": {"type": "block"},
+    "ip_is_private": {"ip_is_private": True, "outbound": "🎯 Direct"},
+    "🎯 Direct": {
+        "type": "selector",
+        "outbounds": ["direct", global_detour],
+        "default": "direct",
+    },
+    "󱤫 广告过滤": {
+        "type": "selector",
+        "geosite": ["category-ads-all"],
+        "outbounds": ["🛑 Block", "🎯 Direct"],
+        "default": "🛑 Block",
+    },
+    "🛑 Block": {
+        "type": "selector",
+        "outbounds": ["block", "direct", global_detour],
+        "default": "block",
+    },
+    "ZJU": {
+        "own": ["zju"],
+        "outbound": "🎯 Direct",
+    },
+    "🇨🇳 CNIP": {
+        "type": "selector",
+        "geoip": ["cn"],
+        "geosite": ["cn"],
+        "outbounds": [
+            "🎯 Direct",
+            global_detour,
+        ],
+        "default": "🎯 Direct",
+    },
+}
 
 
 single_selecor = {
@@ -491,7 +534,7 @@ single_selecor = {
 
 
 with open("mixed.yaml", "r", encoding="utf-8") as file, open(
-    "result{}.json".format("_zju" if use_zju else ""), "w", encoding="utf-8"
+    "result{}.json".format("_zju" if use_zju else "_simple" if args.simple else ""), "w", encoding="utf-8"
 ) as result_file:
     if not args.zju:
         rules_with_rule_set.pop("ZJU")
@@ -513,10 +556,13 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
         "experimental": {
             "clash_api": {
                 "external_controller": "127.0.0.1:9090",
-                "external_ui": "ui",
+                # "external_ui": "ui",
                 "default_mode": "rule",
             },
-            "cache_file": {"enabled": True, "store_fakeip": False},
+            "cache_file": {
+                "enabled": True,
+                #    "store_fakeip": False
+            },
         },
         "dns": {
             "servers": [
@@ -577,12 +623,11 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
                 ]
             )
             + [
-                {"query_type": ["A", "AAAA"], "rewrite_ttl": 1, "server": "dns-fakeip"},
                 {"outbound": "any", "server": "dns-ali-doh"},
+                {"rule_set": "geosite-cn", "server": "dns-ali-doh"},
                 {"clash_mode": "direct", "server": "dns-ali-doh"},
                 {"clash_mode": "global", "server": "dns-google-tls"},
-                {"rule_set": "geosite-cn", "server": "dns-ali-doh"}
-                # {"outbound": ["any"], "server": "remote"},
+                {"query_type": ["A", "AAAA"], "rewrite_ttl": 1, "server": "dns-fakeip"},
             ],
             "final": "dns-google-tls",
             "fakeip": {
@@ -590,27 +635,27 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
                 "inet4_range": "198.18.0.0/15",
                 **({"inet6_range": "fc00::/18"} if args.six else {}),
             },
-            "independent_cache": True,
-            "strategy": "ipv4_only",
+            # "independent_cache": True,
+            # "strategy": "ipv4_only",
         },
         "inbounds": [
             {
                 "type": "tun",
-                "tag": "tun0",
+                # "tag": "tun0",
                 "inet4_address": "172.19.0.1/30",
                 **({"inet6_range": "fdfd:9527::1/32"} if args.six else {}),
                 "auto_route": True,
                 "strict_route": True,
                 "sniff": True,
-                "endpoint_independent_nat": False,
+                # "endpoint_independent_nat": False,
                 "stack": "system",
-                "platform": {
-                    "http_proxy": {
-                        "enabled": True,
-                        "server": "127.0.0.1",
-                        "server_port": 7890,
-                    }
-                },
+                # "platform": {
+                #     "http_proxy": {
+                #         "enabled": True,
+                #         "server": "127.0.0.1",
+                #         "server_port": 7890,
+                #     }
+                # },
             },
             {
                 "type": "mixed",
@@ -618,16 +663,20 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
                 "listen_port": 7890,
                 "sniff": True,
                 "users": [],
+                "set_system_proxy": True,
             },
         ],
         "outbounds": get_outbounds(
-            rule_config=rules_with_rule_set, place_outbound=place_outbound
+            rule_config=simple_version_rules if args.simple else rules_with_rule_set,
+            place_outbound=place_outbound,
         ),
         "route": {
             # "auto_detect_interface": true, 如果您是Linux、Windows 和 macOS用户，请将此条注释撤销，使 final 其生效，以免造成问题（上一行记得加,）
             "final": global_detour,
-            "rule_set": get_rule_set(rules_with_rule_set),
-            "rules": get_route_rules(rule_config=rules_with_rule_set),
+            "rule_set": get_rule_set(
+                simple_version_rules if args.simple else rules_with_rule_set,
+            ),
+            "rules": get_route_rules(rule_config=simple_version_rules if args.simple else rules_with_rule_set,),
         },
     }
 
