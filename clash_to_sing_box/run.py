@@ -534,7 +534,9 @@ single_selecor = {
 
 
 with open("mixed.yaml", "r", encoding="utf-8") as file, open(
-    "result{}.json".format("_zju" if use_zju else "_simple" if args.simple else ""),
+    "result{}{}.json".format(
+        "_zju" if use_zju else "", "_simple" if args.simple else ""
+    ),
     "w",
     encoding="utf-8",
 ) as result_file:
