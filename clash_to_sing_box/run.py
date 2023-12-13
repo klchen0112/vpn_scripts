@@ -566,7 +566,7 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
             },
             "cache_file": {
                 "enabled": True,
-                #    "store_fakeip": False
+                "store_fakeip": False
             },
         },
         "dns": {
@@ -641,7 +641,7 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
                 **({"inet6_range": "fc00::/18"} if args.six else {}),
             },
             # "independent_cache": True,
-            # "strategy": "ipv4_only",
+            "strategy": "ipv4_only",
         },
         "inbounds": [
             {
