@@ -644,24 +644,24 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
             # "strategy": "ipv4_only",
         },
         "inbounds": [
-            # {
-            #     "type": "tun",
-            #     # "tag": "tun0",
-            #     "inet4_address": "172.19.0.1/30",
-            #     **({"inet6_range": "fdfd:9527::1/32"} if args.six else {}),
-            #     "auto_route": True,
-            #     "strict_route": True,
-            #     "sniff": True,
-            #     # "endpoint_independent_nat": False,
-            #     "stack": "system",
-            #     # "platform": {
-            #     #     "http_proxy": {
-            #     #         "enabled": True,
-            #     #         "server": "127.0.0.1",
-            #     #         "server_port": 7890,
-            #     #     }
-            #     # },
-            # },
+            {
+                "type": "tun",
+                # "tag": "tun0",
+                "inet4_address": "172.19.0.1/30",
+                **({"inet6_range": "fdfd:9527::1/32"} if args.six else {}),
+                "auto_route": True,
+                "strict_route": True,
+                "sniff": True,
+                "endpoint_independent_nat": False,
+                "stack": "system",
+                # "platform": {
+                #     "http_proxy": {
+                #         "enabled": True,
+                #         "server": "127.0.0.1",
+                #         "server_port": 7890,
+                #     }
+                # },
+            },
             {
                 "type": "mixed",
                 "listen": "127.0.0.1",
@@ -676,7 +676,7 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
             place_outbound=place_outbound,
         ),
         "route": {
-            # "auto_detect_interface": true, 如果您是Linux、Windows 和 macOS用户，请将此条注释撤销，使 final 其生效，以免造成问题（上一行记得加,）
+            "auto_detect_interface": True,  # 如果您是Linux、Windows 和 macOS用户，请将此条注释撤销，使 final 其生效，以免造成问题（上一行记得加,）
             "final": global_detour,
             "rule_set": get_rule_set(
                 simple_version_rules if args.simple else rules_with_rule_set,
