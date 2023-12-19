@@ -2,7 +2,7 @@
 import requests
 import yaml
 
-black_list = ["机场","订阅"]
+black_list = ["机场","订阅","流量"]
 with open("airport.txt","r") as fp:
     headers = {'User-Agent': 'clash-ver/v1.3.8'}
     result_dict = {
