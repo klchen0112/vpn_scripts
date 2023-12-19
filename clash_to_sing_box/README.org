@@ -1,11 +1,13 @@
 # 如何使用
 
-1. 复制你的clash订阅到mixed.yaml
+1. 复制你的clash订阅到当前目录下的airport.txt
 2. 执行run.py
 
 #+begin_src shell
-# 不使用zju dns解析内网
-python run.py
-# 或使用zju dns 解析内网
-python run.py --zju
+# 安装必要的包
+pip install requests yaml
+# -z 或 --zju 参数使用zju的dns解析内网
+# --six 参数使用ipv6
+# --simple 使用极简配置 只使用geoip cn 和 geosite-cn
+python run.py --zju --six --simple
 #+end_src

@@ -92,7 +92,8 @@ place_back = [
     "印度",
     "意大利",
     "埃及",
-    "马来西亚" "巴基斯坦",
+    "马来西亚",
+    "巴基斯坦",
     "智利",
     "哥伦比亚",
 ]
@@ -564,10 +565,7 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
                 # "external_ui": "ui",
                 "default_mode": "rule",
             },
-            "cache_file": {
-                "enabled": True,
-                "store_fakeip": False
-            },
+            "cache_file": {"enabled": True, "store_fakeip": False},
         },
         "dns": {
             "servers": [
