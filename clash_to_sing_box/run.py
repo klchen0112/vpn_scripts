@@ -263,7 +263,7 @@ def get_outbounds(rule_config, place_outbound):
 rules_with_rule_set = {
     global_detour: {
         "type": "selector",
-        "outbounds": ["地区测速", "地区选择", "节点选择"],
+        "outbounds": ["地区测速", "地区选择", "节点选择","direct"],
         "default": "地区测速",
     },
     "clash_global": {"clash_mode": "global", "outbound": global_detour},
@@ -571,12 +571,12 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
         "dns": {
             "servers": [
                 {
-                    "tag": "dns-google-tls",
+                    "tag": "dns-remote",
                     "address": "tls://8.8.8.8",
                     "detour": global_detour,
                 },
                 {
-                    "tag": "dns-ali-doh",
+                    "tag": "dns-direct",
                     "address": "https://223.5.5.5/dns-query",
                     "detour": "direct",
                 },
@@ -600,7 +600,7 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
             "rules": [
                 {
                     "domain": ["ghproxy.com", "cdn.jsdelivr.net"],
-                    "server": "dns-ali-doh",
+                    "server": "dns-direct",
                 },
                 {
                     "rule_set": "geosite-category-ads-all",
@@ -627,13 +627,13 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
                 ]
             )
             + [
-                {"outbound": "any", "server": "dns-ali-doh"},
-                {"rule_set": "geosite-cn", "server": "dns-ali-doh"},
-                {"clash_mode": "direct", "server": "dns-ali-doh"},
-                {"clash_mode": "global", "server": "dns-google-tls"},
+                {"outbound": "any", "server": "dns-direct"},
+                {"rule_set": "geosite-cn", "server": "dns-direct"},
+                {"clash_mode": "direct", "server": "dns-direct"},
+                {"clash_mode": "global", "server": "dns-remote"},
                 {"query_type": ["A", "AAAA"], "rewrite_ttl": 1, "server": "dns-fakeip"},
             ],
-            "final": "dns-google-tls",
+            "final": "dns-remote",
             "fakeip": {
                 "enabled": True,
                 "inet4_range": "198.18.0.0/15",
