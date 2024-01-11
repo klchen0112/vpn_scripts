@@ -8,6 +8,8 @@ parser = argparse.ArgumentParser(description="")
 parser.add_argument("-z", "--zju", help="wether use zju", action="store_true")
 parser.add_argument("--six", help="ipv6", action="store_true")
 parser.add_argument("--simple", help="use simple version", action="store_true")
+parser.add_argument("--tun", help="use tun", action="store_true")
+parser.add_argument("--mixed", help="use tun", action="store_true")
 args = parser.parse_args()
 
 use_zju = args.zju
@@ -70,6 +72,34 @@ def process_proxy(proxy):
             if not proxy["udp"]:
                 result["network"] = "tcp"
         return result
+    elif proxy["type"] == "vmess":
+        vmess_server_base = {
+            "type": "vmess",
+            "tag": "",
+            "server": "",
+            "server_port": -1,
+            "uuid": "",
+            "alter_id": "",
+        }
+        result = copy.deepcopy(vmess_server_base)
+        result["tag"] = proxy["name"]
+        result["server"] = proxy["server"]
+        result["server_port"] = proxy["port"]
+        result["uuid"] = proxy["uuid"]
+        result["alter_id"] = proxy["alterId"]
+        result["security"] = proxy["cipher"]
+        if proxy["network"] == "ws":
+            result["transport"] = {
+                "type": "ws",
+            }
+        elif proxy["network"] == "grpc":
+            result["transport"] = {
+                "type": "grpc",
+                "service_name": proxy["grpc-opts"]["grpc-service-name"],
+            }
+        return result
+    else:
+        raise ValueError("Wrong proxy type")
 
 
 place_back = [
@@ -96,7 +126,7 @@ place_back = [
     "巴基斯坦",
     "智利",
     "哥伦比亚",
-    "尼日利亚"
+    "尼日利亚",
 ]
 
 zju_dns = "10.10.0.21"
@@ -115,16 +145,16 @@ def get_rule_set_url(rule_type: str, name: str):
     if rule_type == "own":
         url = f"https://raw.githubusercontent.com/klchen0112/vpn_scripts/master/singbox/{name}.json"
     elif rule_type == "geosite":
-        url = f"https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-{name}.srs"
+        url = f"https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/{name}.srs"
     elif rule_type == "geoip":
-        url = f"https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-{name}.srs"
+        url = f"https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/{name}.srs"
     else:
         raise ValueError("Wrong rule_type")
     return {
         "tag": f"{rule_type}-{name}",
         "type": "remote",
         "url": url,
-        "download_detour": global_detour,
+        "download_detour": global_detour if rule_type == "own" else "direct",
         "format": "source" if rule_type == "own" else "binary",
     }
 
@@ -263,7 +293,7 @@ def get_outbounds(rule_config, place_outbound):
 rules_with_rule_set = {
     global_detour: {
         "type": "selector",
-        "outbounds": ["地区测速", "地区选择", "节点选择","direct"],
+        "outbounds": ["地区测速", "地区选择", "节点选择", "direct"],
         "default": "地区测速",
     },
     "clash_global": {"clash_mode": "global", "outbound": global_detour},
@@ -430,7 +460,7 @@ rules_with_rule_set = {
     },
     "巴哈姆特": {
         "type": "selector",
-        "geosite": ["bahamut"],
+        "geosite": ["bahamut", "bilibili@!cn"],
         "outbounds": [
             "台湾",
             "香港",
@@ -535,6 +565,43 @@ single_selecor = {
 }
 
 
+def get_inbounds(use_tun, use_mixed, use_v6):
+    result = []
+    if use_mixed:
+        result.append(
+            {
+                "type": "mixed",
+                "listen": "127.0.0.1",
+                "listen_port": 7890,
+                "sniff": True,
+                "users": [],
+                "set_system_proxy": True,
+            }
+        )
+    if use_tun:
+        result.append(
+            {
+                "type": "tun",
+                # "tag": "tun0",
+                "inet4_address": "172.19.0.1/30",
+                **({"inet6_address": "fdfd:9527::1/32"} if use_v6 else {}),
+                "auto_route": True,
+                "strict_route": True,
+                "sniff": True,
+                "endpoint_independent_nat": False,
+                "stack": "system",
+                "platform": {
+                    "http_proxy": {
+                        "enabled": True,
+                        "server": "127.0.0.1",
+                        "server_port": 7890,
+                    }
+                },
+            }
+        )
+    return result
+
+
 with open("mixed.yaml", "r", encoding="utf-8") as file, open(
     "result{}{}.json".format(
         "_zju" if use_zju else "", "_simple" if args.simple else ""
@@ -563,8 +630,10 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
         "experimental": {
             "clash_api": {
                 "external_controller": "127.0.0.1:9090",
-                # "external_ui": "ui",
+                "external_ui": "ui",
                 "default_mode": "rule",
+                "external_ui_download_url": "https://github.com/MetaCubeX/Yacd-meta/archive/gh-pages.zip",
+                "external_ui_download_detour": global_detour,
             },
             "cache_file": {"enabled": True, "store_fakeip": False},
         },
@@ -640,36 +709,11 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
                 **({"inet6_range": "fc00::/18"} if args.six else {}),
             },
             # "independent_cache": True,
-            "strategy": "ipv4_only",
+            "strategy": "prefer_ipv4" if args.six else "ipv4_only",
         },
-        "inbounds": [
-            {
-                "type": "tun",
-                # "tag": "tun0",
-                "inet4_address": "172.19.0.1/30",
-                **({"inet6_range": "fdfd:9527::1/32"} if args.six else {}),
-                "auto_route": True,
-                "strict_route": True,
-                "sniff": True,
-                "endpoint_independent_nat": False,
-                "stack": "system",
-                # "platform": {
-                #     "http_proxy": {
-                #         "enabled": True,
-                #         "server": "127.0.0.1",
-                #         "server_port": 7890,
-                #     }
-                # },
-            },
-            {
-                "type": "mixed",
-                "listen": "127.0.0.1",
-                "listen_port": 7890,
-                "sniff": True,
-                "users": [],
-                "set_system_proxy": True,
-            },
-        ],
+        "inbounds": get_inbounds(
+            use_tun=args.tun, use_mixed=args.mixed, use_v6=args.six
+        ),
         "outbounds": get_outbounds(
             rule_config=simple_version_rules if args.simple else rules_with_rule_set,
             place_outbound=place_outbound,
