@@ -386,7 +386,7 @@ rules_with_rule_set = {
             global_detour,
             "🎯 Direct",
         ],
-        "default": "🎯 Direct",
+        "default": global_detour,
     },
     "󰒚 Shopping": {
         "type": "selector",
@@ -435,7 +435,7 @@ rules_with_rule_set = {
     },
     "Game CN": {
         "type": "selector",
-        "geosite": ["category-games@cn"],
+        "geosite": ["category-games@cn", "category-game-accelerator-cn"],
         "outbounds": [
             "🎯 Direct",
             global_detour,
@@ -486,6 +486,15 @@ rules_with_rule_set = {
             "category-media",
             "category-entertainment",
         ],
+        "outbounds": [
+            global_detour,
+            "🎯 Direct",
+        ],
+        "default": global_detour,
+    },
+    "🟨 Porn": {
+        "type": "selector",
+        "geosite": ["category-porn"],
         "outbounds": [
             global_detour,
             "🎯 Direct",
