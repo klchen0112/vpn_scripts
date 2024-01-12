@@ -2,6 +2,7 @@ import yaml
 import json
 import copy
 import argparse
+import re
 
 parser = argparse.ArgumentParser(description="")
 
@@ -103,32 +104,33 @@ def process_proxy(proxy):
         raise ValueError("Wrong proxy type")
 
 
-place_back = [
-    "香港",
-    "美国",
-    "台湾",
-    "日本",
-    "韩国",
-    "新加坡",
-    "俄罗斯",
-    "法国",
-    "英国",
-    "德国",
-    "澳大利亚",
-    "菲律宾",
-    "土耳其",
-    "阿根廷",
-    "乌克兰",
-    "巴西",
-    "印度",
-    "意大利",
-    "埃及",
-    "马来西亚",
-    "巴基斯坦",
-    "智利",
-    "哥伦比亚",
-    "尼日利亚",
-]
+place_patterns = {
+    "🇭🇰 香港": r"🇭🇰|香港|港|hongkong",
+    "🇺🇸 美国": r"🇺🇸|united states",
+    "🇹🇼 台湾": r"🇹🇼|台湾",
+    "🇯🇵 日本": r"🇯🇵|日本",
+    "🇰🇷 韩国": r"🇰🇷|韩国",
+    "🇸🇬 新加坡": r"🇸🇬|新加坡",
+    "🇷🇺 俄罗斯": r"🇷🇺|俄罗斯",
+    "🇫🇷 法国": r"🇫🇷|法国",
+    "🇬🇧 英国": r"🇬🇧|英国",
+    "🇩🇪 德国": r"🇩🇪|德国",
+    "🇦🇺 澳大利亚": r"🇦🇺|澳大利亚",
+    "🇵🇭 菲律宾": r"🇵🇭|菲律宾",
+    "🇹🇷 土耳其": r"🇹🇷|土耳其",
+    "🇦🇷 阿根廷": r"🇦🇷|阿根廷",
+    "🇺🇦 乌克兰": r"🇺🇦|乌克兰",
+    "🇧🇷 巴西": r"🇧🇷|巴西",
+    "🇮🇳 印度": r"🇮🇳|印度",
+    "🇮🇹 意大利": r"🇮🇹|意大利",
+    "🇪🇬 埃及": r"🇪🇬|埃及",
+    "🇲🇾 马来西亚": r"🇲🇾|马来西亚",
+    "🇵🇰 巴基斯坦": r"🇵🇰|巴基斯坦",
+    "🇨🇱 智利": r"🇨🇱|智利",
+    "🇨🇴 哥伦比亚": r"🇨🇴|哥伦比亚",
+    "🇳🇬 尼日利亚": r"🇳🇬|尼日利亚",
+}
+
 
 zju_dns = "10.10.0.21"
 zju_domains = []
@@ -322,8 +324,8 @@ rules_with_rule_set = {
     "🤖 OpenAI": {
         "type": "selector",
         "geosite": ["openai"],
-        "outbounds": ["美国", global_detour, "🎯 Direct"],
-        "default": "美国",
+        "outbounds": ["🇺🇸 美国", global_detour, "🎯 Direct"],
+        "default": "🇺🇸 美国",
     },
     " Dev-CN": {
         "type": "selector",
@@ -445,7 +447,7 @@ rules_with_rule_set = {
     "󱎓 Game Global": {
         "type": "selector",
         "geosite": ["category-games"],
-        "outbounds": ["日本", "香港", "台湾", global_detour, "🎯 Direct"],
+        "outbounds": ["🇯🇵 日本", "🇭🇰 香港", "🇹🇼 台湾", global_detour, "🎯 Direct"],
         "default": global_detour,
     },
     "哔哩哔哩": {
@@ -453,8 +455,8 @@ rules_with_rule_set = {
         "geosite": ["bilibili"],
         "outbounds": [
             "🎯 Direct",
-            "台湾",
-            "香港",
+            "🇹🇼 台湾",
+            "🇭🇰 香港",
             global_detour,
         ],
         "default": "🎯 Direct",
@@ -463,12 +465,12 @@ rules_with_rule_set = {
         "type": "selector",
         "geosite": ["bahamut", "bilibili@!cn"],
         "outbounds": [
-            "台湾",
-            "香港",
+            "🇹🇼 台湾",
+            "🇭🇰 香港",
             global_detour,
             "🎯 Direct",
         ],
-        "default": "台湾",
+        "default": "🇹🇼 台湾",
     },
     "国内流媒体": {
         "type": "selector",
@@ -628,8 +630,8 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
     place_outbound = dict()
 
     for proxy in data["proxies"]:
-        for place_name in place_back:
-            if place_name in proxy["name"]:
+        for place_name, place_pattern in place_patterns.items():
+            if re.search(place_pattern, proxy["name"]):
                 if place_name not in place_outbound:
                     place_outbound[place_name] = []
                 place_outbound[place_name].append(
