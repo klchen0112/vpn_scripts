@@ -10,6 +10,7 @@ parser.add_argument("--six", help="ipv6", action="store_true")
 parser.add_argument("--simple", help="use simple version", action="store_true")
 parser.add_argument("--tun", help="use tun", action="store_true")
 parser.add_argument("--mixed", help="use tun", action="store_true")
+parser.add_argument("--lan", help="use tun", action="store_true")
 args = parser.parse_args()
 
 use_zju = args.zju
@@ -565,13 +566,13 @@ single_selecor = {
 }
 
 
-def get_inbounds(use_tun, use_mixed, use_v6):
+def get_inbounds(use_tun, use_mixed, use_v6, listen_lan):
     result = []
     if use_mixed:
         result.append(
             {
                 "type": "mixed",
-                "listen": "127.0.0.1",
+                "listen": "0.0.0.0" if listen_lan else "127.0.0.1",
                 "listen_port": 7890,
                 "sniff": True,
                 "users": [],
@@ -585,6 +586,7 @@ def get_inbounds(use_tun, use_mixed, use_v6):
                 # "tag": "tun0",
                 "inet4_address": "172.19.0.1/30",
                 **({"inet6_address": "fdfd:9527::1/32"} if use_v6 else {}),
+                "mtu": 9000,
                 "auto_route": True,
                 "strict_route": True,
                 "sniff": True,
@@ -629,11 +631,11 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
         "log": log_settings,
         "experimental": {
             "clash_api": {
-                "external_controller": "127.0.0.1:9090",
+                "external_controller": "0.0.0.0:9090" if args.lan else "127.0.0.1:9090",
                 "external_ui": "ui",
                 "default_mode": "rule",
-                "external_ui_download_url": "https://github.com/MetaCubeX/Yacd-meta/archive/gh-pages.zip",
-                "external_ui_download_detour": global_detour,
+                "external_ui_download_url": "https://mirror.ghproxy.com/https://github.com/MetaCubeX/metacubexd/archive/gh-pages.zip",
+                "external_ui_download_detour": "direct",
             },
             "cache_file": {"enabled": True, "store_fakeip": False},
         },
@@ -712,7 +714,7 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
             "strategy": "prefer_ipv4" if args.six else "ipv4_only",
         },
         "inbounds": get_inbounds(
-            use_tun=args.tun, use_mixed=args.mixed, use_v6=args.six
+            use_tun=args.tun, use_mixed=args.mixed, use_v6=args.six, listen_lan=args.lan
         ),
         "outbounds": get_outbounds(
             rule_config=simple_version_rules if args.simple else rules_with_rule_set,
