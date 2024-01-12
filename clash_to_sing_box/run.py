@@ -587,7 +587,7 @@ def get_inbounds(use_tun, use_mixed, use_v6, listen_lan):
                 "listen_port": 7890,
                 "sniff": True,
                 "users": [],
-                "set_system_proxy": False is listen_lan else True,
+                "set_system_proxy": False if listen_lan else True,
             }
         )
     if use_tun:
