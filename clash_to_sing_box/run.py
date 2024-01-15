@@ -10,8 +10,8 @@ parser.add_argument("-z", "--zju", help="whether use zju", action="store_true")
 parser.add_argument("--six", help="whether to use ipv6", action="store_true")
 parser.add_argument("--simple", help="use simple version", action="store_true")
 parser.add_argument("--tun", help="use tun", action="store_true")
-parser.add_argument("--mixed", help="use tun", action="store_true")
-parser.add_argument("--lan", help="use tun mode", action="store_true")
+parser.add_argument("--mixed", help="use mixed outbound", action="store_true")
+parser.add_argument("--lan", help="use lan mode", action="store_true")
 parser.add_argument("--docker",help="docker version",action="store_true")
 args = parser.parse_args()
 
@@ -131,7 +131,7 @@ def process_proxy(proxy):
 
 place_patterns = {
     "🇭🇰 香港": r"🇭🇰|香港|港|hongkong",
-    "🇺🇸 美国": r"🇺🇸|united states",
+    "🇺🇸 美国": r"🇺🇸|美国|united states",
     "🇹🇼 台湾": r"🇹🇼|台湾",
     "🇯🇵 日本": r"🇯🇵|日本",
     "🇰🇷 韩国": r"🇰🇷|韩国",
@@ -140,13 +140,14 @@ place_patterns = {
     "🇫🇷 法国": r"🇫🇷|法国",
     "🇬🇧 英国": r"🇬🇧|英国",
     "🇩🇪 德国": r"🇩🇪|德国",
-    "🇦🇺 澳大利亚": r"🇦🇺|澳大利亚",
+    "🇦🇺 澳大利亚": r"🇦🇺|澳大利亚|澳洲",
     "🇵🇭 菲律宾": r"🇵🇭|菲律宾",
     "🇹🇷 土耳其": r"🇹🇷|土耳其",
     "🇦🇷 阿根廷": r"🇦🇷|阿根廷",
     "🇺🇦 乌克兰": r"🇺🇦|乌克兰",
     "🇧🇷 巴西": r"🇧🇷|巴西",
     "🇮🇳 印度": r"🇮🇳|印度",
+    "🇮🇩 印尼": r"🇮🇩|印尼",
     "🇮🇹 意大利": r"🇮🇹|意大利",
     "🇪🇬 埃及": r"🇪🇬|埃及",
     "🇲🇾 马来西亚": r"🇲🇾|马来西亚",
@@ -660,6 +661,7 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
     place_outbound = dict()
 
     for proxy in data["proxies"]:
+        flag = True
         for place_name, place_pattern in place_patterns.items():
             if re.search(place_pattern, proxy["name"]):
                 if place_name not in place_outbound:
@@ -667,7 +669,10 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
                 place_outbound[place_name].append(
                     copy.deepcopy(process_proxy(proxy=proxy))
                 )
-
+                flag = False
+                break
+        if flag:
+            print(proxy)
     result_json = {
         "log": log_settings,
         "experimental": {
