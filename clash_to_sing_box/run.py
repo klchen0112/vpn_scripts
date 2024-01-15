@@ -93,6 +93,12 @@ def process_proxy(proxy):
         if proxy["network"] == "ws":
             result["transport"] = {
                 "type": "ws",
+                "path": proxy["ws-path"],
+                "headers": {
+                    "Host": [
+                        proxy["ws-opts"]["headers"]["Host"]
+                    ]
+                }
             }
         elif proxy["network"] == "grpc":
             result["transport"] = {
