@@ -6,12 +6,13 @@ import re
 
 parser = argparse.ArgumentParser(description="")
 
-parser.add_argument("-z", "--zju", help="wether use zju", action="store_true")
-parser.add_argument("--six", help="ipv6", action="store_true")
+parser.add_argument("-z", "--zju", help="whether use zju", action="store_true")
+parser.add_argument("--six", help="whether to use ipv6", action="store_true")
 parser.add_argument("--simple", help="use simple version", action="store_true")
 parser.add_argument("--tun", help="use tun", action="store_true")
 parser.add_argument("--mixed", help="use tun", action="store_true")
-parser.add_argument("--lan", help="use tun", action="store_true")
+parser.add_argument("--lan", help="use tun mode", action="store_true")
+parser.add_argument("--docker",help="docker version",action="store_true")
 args = parser.parse_args()
 
 use_zju = args.zju
@@ -94,11 +95,7 @@ def process_proxy(proxy):
             result["transport"] = {
                 "type": "ws",
                 "path": proxy["ws-path"],
-                "headers": {
-                    "Host": [
-                        proxy["ws-opts"]["headers"]["Host"]
-                    ]
-                }
+                "headers": {"Host": [proxy["ws-opts"]["headers"]["Host"]]},
             }
         elif proxy["network"] == "grpc":
             result["transport"] = {
@@ -106,6 +103,28 @@ def process_proxy(proxy):
                 "service_name": proxy["grpc-opts"]["grpc-service-name"],
             }
         return result
+    elif proxy["type"] == "hysteria2":
+        hysteria2_server_base = {
+            "type": "hysteria2",
+            "tag": "",
+            "server": "",
+            "server_port": -1,
+            "password": "",
+            "tls": {
+                "enabled": True,
+                "insecure": False,
+                "server_name": None,
+            },
+            "up_mbps": 100,
+            "down_mbps": 100,
+        }
+        hysteria2_server_base["tag"] = proxy["name"]
+        hysteria2_server_base["server"] = proxy["server"]
+        hysteria2_server_base["server_port"] = proxy["port"]
+        hysteria2_server_base["password"] = proxy["password"]
+        hysteria2_server_base["up_mbps"] = proxy["up"]
+        hysteria2_server_base["down_mbps"] = proxy["down"]
+        return hysteria2_server_base
     else:
         raise ValueError("Wrong proxy type")
 
@@ -583,7 +602,7 @@ single_selecor = {
 }
 
 
-def get_inbounds(use_tun, use_mixed, use_v6, listen_lan):
+def get_inbounds(use_tun, use_mixed, use_v6, listen_lan,docker):
     result = []
     if use_mixed:
         result.append(
@@ -593,10 +612,10 @@ def get_inbounds(use_tun, use_mixed, use_v6, listen_lan):
                 "listen_port": 7890,
                 "sniff": True,
                 "users": [],
-                "set_system_proxy": False if listen_lan else True,
+                "set_system_proxy": False if docker else True,
             }
         )
-    if use_tun:
+    if use_tun and not docker:
         result.append(
             {
                 "type": "tun",
@@ -736,7 +755,7 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
             "strategy": "prefer_ipv4" if args.six else "ipv4_only",
         },
         "inbounds": get_inbounds(
-            use_tun=args.tun, use_mixed=args.mixed, use_v6=args.six, listen_lan=args.lan
+            use_tun=args.tun, use_mixed=args.mixed, use_v6=args.six, listen_lan=args.lan,docker=args.docker
         ),
         "outbounds": get_outbounds(
             rule_config=simple_version_rules if args.simple else rules_with_rule_set,

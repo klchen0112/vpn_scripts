@@ -4,7 +4,7 @@ import yaml
 
 black_list = ["机场","订阅","流量","套餐","重置","电报群","官网","去除"]
 with open("airport.txt","r") as fp:
-    headers = {'User-Agent': 'clash-ver/v1.3.8'}
+    headers = {'User-Agent': 'clash-verge/v1.3.8'}
     result_dict = {
         'proxies': []
     }
