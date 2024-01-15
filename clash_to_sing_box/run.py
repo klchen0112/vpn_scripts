@@ -12,7 +12,7 @@ parser.add_argument("--simple", help="use simple version", action="store_true")
 parser.add_argument("--tun", help="use tun", action="store_true")
 parser.add_argument("--mixed", help="use mixed outbound", action="store_true")
 parser.add_argument("--lan", help="use lan mode", action="store_true")
-parser.add_argument("--docker",help="docker version",action="store_true")
+parser.add_argument("--docker", help="docker version", action="store_true")
 args = parser.parse_args()
 
 use_zju = args.zju
@@ -23,7 +23,7 @@ url_test_base = {
     "tag": "",
     "outbounds": [],
     "url": "https://www.gstatic.com/generate_204",
-    "interval": "1m",
+    "interval": "3m",
     "tolerance": 50,
 }
 
@@ -461,7 +461,7 @@ rules_with_rule_set = {
         ],
         "default": global_detour,
     },
-    "Game CN": {
+    "󱎓 Game CN": {
         "type": "selector",
         "geosite": ["category-games@cn", "category-game-accelerator-cn"],
         "outbounds": [
@@ -470,7 +470,7 @@ rules_with_rule_set = {
         ],
         "default": "🎯 Direct",
     },
-    "󱎓 Game Global": {
+    "🎮 Game Global": {
         "type": "selector",
         "geosite": ["category-games"],
         "outbounds": ["🇯🇵 日本", "🇭🇰 香港", "🇹🇼 台湾", global_detour, "🎯 Direct"],
@@ -531,7 +531,7 @@ rules_with_rule_set = {
     },
     " Global": {
         "type": "selector",
-        "geosite": ["geolocation-!cn", "tld-!cn"],
+        "geosite": ["geolocation-!cn", "tld-!cn", "category-cas"],
         "outbounds": [
             global_detour,
             "🎯 Direct",
@@ -603,7 +603,7 @@ single_selecor = {
 }
 
 
-def get_inbounds(use_tun, use_mixed, use_v6, listen_lan,docker):
+def get_inbounds(use_tun, use_mixed, use_v6, listen_lan, docker):
     result = []
     if use_mixed:
         result.append(
@@ -760,7 +760,11 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
             "strategy": "prefer_ipv4" if args.six else "ipv4_only",
         },
         "inbounds": get_inbounds(
-            use_tun=args.tun, use_mixed=args.mixed, use_v6=args.six, listen_lan=args.lan,docker=args.docker
+            use_tun=args.tun,
+            use_mixed=args.mixed,
+            use_v6=args.six,
+            listen_lan=args.lan,
+            docker=args.docker,
         ),
         "outbounds": get_outbounds(
             rule_config=simple_version_rules if args.simple else rules_with_rule_set,
