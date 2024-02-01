@@ -531,7 +531,7 @@ rules_with_rule_set = {
     },
     " Global": {
         "type": "selector",
-        "geosite": ["geolocation-!cn", "tld-!cn", "category-cas"],
+        "geosite": ["geolocation-!cn"],
         "outbounds": [
             global_detour,
             "🎯 Direct",
@@ -549,10 +549,11 @@ rules_with_rule_set = {
         "default": "🎯 Direct",
     },
 }
+
 simple_version_rules = {
     global_detour: {
         "type": "selector",
-        "outbounds": ["地区测速", "地区选择", "节点选择"],
+        "outbounds": ["地区测速", "地区选择", "节点选择","direct"],
         "default": "地区测速",
     },
     "clash_global": {"clash_mode": "global", "outbound": global_detour},
@@ -694,7 +695,7 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
                 },
                 {
                     "tag": "dns-direct",
-                    "address": "https://223.5.5.5/dns-query",
+                    "address": "tls://223.5.5.5",
                     "detour": "direct",
                 },
             ]
