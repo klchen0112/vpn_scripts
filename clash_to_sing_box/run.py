@@ -13,6 +13,7 @@ parser.add_argument("--tun", help="use tun", action="store_true")
 parser.add_argument("--mixed", help="use mixed outbound", action="store_true")
 parser.add_argument("--lan", help="use lan mode", action="store_true")
 parser.add_argument("--docker", help="docker version", action="store_true")
+parser.add_argument("--fakeip", action="store_true")
 args = parser.parse_args()
 
 use_zju = args.zju
@@ -133,9 +134,9 @@ place_patterns = {
     "🇭🇰 香港": r"🇭🇰|香港|港|hongkong",
     "🇺🇸 美国": r"🇺🇸|美国|united states",
     "🇹🇼 台湾": r"🇹🇼|台湾",
-    "🇯🇵 日本": r"🇯🇵|日本",
-    "🇰🇷 韩国": r"🇰🇷|韩国",
-    "🇸🇬 新加坡": r"🇸🇬|新加坡",
+    "🇯🇵 日本": r"🇯🇵|日本|JP",
+    "🇰🇷 韩国": r"🇰🇷|韩国|KR",
+    "🇸🇬 新加坡": r"🇸🇬|新加坡|SG",
     "🇷🇺 俄罗斯": r"🇷🇺|俄罗斯",
     "🇫🇷 法国": r"🇫🇷|法国",
     "🇬🇧 英国": r"🇬🇧|英国",
@@ -296,7 +297,6 @@ def get_outbounds(rule_config, place_outbound):
         if value["type"] in ["direct", "dns", "block"]:
             outbounds.append({"tag": key, "type": value["type"]})
         elif value["type"] == "selector":
-            # print(key)
             outbounds.append(
                 {
                     "tag": key,
@@ -309,9 +309,7 @@ def get_outbounds(rule_config, place_outbound):
         url_place = copy.deepcopy(url_test_base)
         url_place["tag"] = name
         for outbound in place_outbounds:
-            # print(outbound)
             url_place["outbounds"].append(outbound["tag"])
-        # print(url_place)
         outbounds.append(url_place)
     for bounds in place_outbound.values():
         outbounds.extend(bounds)
@@ -553,7 +551,7 @@ rules_with_rule_set = {
 simple_version_rules = {
     global_detour: {
         "type": "selector",
-        "outbounds": ["地区测速", "地区选择", "节点选择","direct"],
+        "outbounds": ["地区测速", "地区选择", "节点选择", "direct"],
         "default": "地区测速",
     },
     "clash_global": {"clash_mode": "global", "outbound": global_detour},
@@ -621,7 +619,7 @@ def get_inbounds(use_tun, use_mixed, use_v6, listen_lan, docker):
         result.append(
             {
                 "type": "tun",
-                # "tag": "tun0",
+                "tag": "tun",
                 "inet4_address": "172.19.0.1/30",
                 **({"inet6_address": "fdfd:9527::1/32"} if use_v6 else {}),
                 "mtu": 9000,
@@ -690,12 +688,12 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
             "servers": [
                 {
                     "tag": "dns-remote",
-                    "address": "tls://8.8.8.8",
+                    "address": "https://9.9.9.9/dns-query",
                     "detour": global_detour,
                 },
                 {
                     "tag": "dns-direct",
-                    "address": "tls://223.5.5.5",
+                    "address": "https://120.53.53.53/dns-query",
                     "detour": "direct",
                 },
             ]
@@ -713,12 +711,25 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
             )
             + [
                 {"tag": "dns-block", "address": "rcode://success"},
-                {"tag": "dns-fakeip", "address": "fakeip"},
-            ],
+            ]
+            + (
+                []
+                if not args.fakeip
+                else [
+                    {
+                        "tag": "dns-fakeip",
+                        "address": "fakeip",
+                    },
+                ]
+            ),
             "rules": [
                 {
-                    "domain": ["ghproxy.com", "cdn.jsdelivr.net"],
-                    "server": "dns-direct",
+                    "domain": [
+                        "ghproxy.com",
+                        "cdn.jsdelivr.net",
+                        "testingcf.jsdelivr.net",
+                    ],
+                    "server": "dns-fakeip" if args.fakeip else "dns-direct",
                 },
                 {
                     "rule_set": "geosite-category-ads-all",
@@ -745,13 +756,28 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
                 ]
             )
             + [
-                {"outbound": "any", "server": "dns-direct"},
+                {"outbound": "any", "server": "dns-direct", "disable_cache": False},
                 {"rule_set": "geosite-cn", "server": "dns-direct"},
                 {"clash_mode": "direct", "server": "dns-direct"},
-                {"clash_mode": "global", "server": "dns-remote"},
-                {"query_type": ["A", "AAAA"], "rewrite_ttl": 1, "server": "dns-fakeip"},
-            ],
-            "final": "dns-remote",
+                {
+                    "clash_mode": "global",
+                    "server": "dns-fakeip" if args.fakeip else "dns-remote",
+                },
+            ]
+            + (
+                [
+                    {
+                        "inbound": "tun",
+                        "query_type": ["A", "AAAA"],
+                        "rewrite_ttl": 1,
+                        "server": "dns-fakeip",
+                    },
+                ]
+                if args.fakeip
+                else []
+            )
+            + [{"rule_set": "geosite-geolocation-!cn", "server": "dns-remote"}],
+            "final": "dns-direct",
             "fakeip": {
                 "enabled": True,
                 "inet4_range": "198.18.0.0/15",
