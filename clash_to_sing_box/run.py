@@ -641,13 +641,14 @@ def get_inbounds(use_tun, use_mixed, use_v6, listen_lan, docker):
 
 
 with open("mixed.yaml", "r", encoding="utf-8") as file, open(
-    "result{}{}{}{}{}{}.json".format(
+    "result{}{}{}{}{}{}{}.json".format(
         "_lan" if args.lan else "",
         "_zju" if use_zju else "",
         "_v6" if args.six else "_v4",
         "_simple" if args.simple else "",
         "_tun" if args.tun else "",
         "_mixed" if args.mixed else "",
+        "_fakeip" if args.fakeip else "",
     ),
     "w",
     encoding="utf-8",
