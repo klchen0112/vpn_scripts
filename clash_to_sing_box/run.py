@@ -329,6 +329,10 @@ rules_with_rule_set = {
     "dns": {"type": "dns"},
     "block": {"type": "block"},
     "ip_is_private": {"ip_is_private": True, "outbound": "🎯 Direct"},
+    "private": {
+        "geosite": ["private"],
+        "outbound": "direct",
+    },
     "🎯 Direct": {
         "type": "selector",
         "outbounds": ["direct", global_detour],
@@ -757,7 +761,7 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
                 ]
             )
             + [
-                {"outbound": "any", "server": "dns-direct", "disable_cache": False},
+                {"outbound": "any", "server": "dns-direct", "disable_cache": True},
                 {"rule_set": "geosite-cn", "server": "dns-direct"},
                 {"clash_mode": "direct", "server": "dns-direct"},
                 {
@@ -780,11 +784,11 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
             + [{"rule_set": "geosite-geolocation-!cn", "server": "dns-remote"}],
             "final": "dns-direct",
             "fakeip": {
-                "enabled": True,
+                "enabled": args.fakeip,
                 "inet4_range": "198.18.0.0/15",
                 **({"inet6_range": "fc00::/18"} if args.six else {}),
             },
-            # "independent_cache": True,
+            "independent_cache": True,
             "strategy": "prefer_ipv4" if args.six else "ipv4_only",
         },
         "inbounds": get_inbounds(
