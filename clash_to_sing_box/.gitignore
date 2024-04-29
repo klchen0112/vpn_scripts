@@ -1,3 +1,5 @@
 mixed.yaml
 *.json
 airport.txt
+ui/
+cache.db
