@@ -175,16 +175,16 @@ def get_rule_set_url(rule_type: str, name: str):
     if rule_type == "own":
         url = f"https://raw.githubusercontent.com/klchen0112/vpn_scripts/master/singbox/{name}.json"
     elif rule_type == "geosite":
-        url = f"https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/{name}.srs"
+        url = f"https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-{name}.srs"
     elif rule_type == "geoip":
-        url = f"https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/{name}.srs"
+        url = f"https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-{name}.srs"
     else:
         raise ValueError("Wrong rule_type")
     return {
         "tag": f"{rule_type}-{name}",
         "type": "remote",
         "url": url,
-        "download_detour": global_detour if rule_type == "own" else "direct",
+        "download_detour": global_detour,
         "format": "source" if rule_type == "own" else "binary",
     }
 
@@ -531,15 +531,15 @@ rules_with_rule_set = {
         ],
         "default": global_detour,
     },
-    " Global": {
-        "type": "selector",
-        "geosite": ["geolocation-!cn"],
-        "outbounds": [
-            global_detour,
-            "🎯 Direct",
-        ],
-        "default": global_detour,
-    },
+    # " Global": {
+    #     "type": "selector",
+    #     "geosite": ["geolocation-!cn"],
+    #     "outbounds": [
+    #         global_detour,
+    #         "🎯 Direct",
+    #     ],
+    #     "default": global_detour,
+    # },
     "🇨🇳 CNIP": {
         "type": "selector",
         "geoip": ["cn"],
@@ -768,11 +768,26 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
                     "clash_mode": "global",
                     "server": "dns-fakeip" if args.fakeip else "dns-remote",
                 },
+                {"rule_set": "geosite-cn", "server": "dns-direct"},
+                # {
+                #     "type": "logical",
+                #     "mode": "and",
+                #     "rules": [
+                #         {
+                #             "rule_set": "geosite-geolocation-!cn",
+                #             "invert": True,
+                #         },
+                #         {
+                #             "rule_set": "geoip-cn"
+                #         }
+                #     ],
+                #     "server": "dns-remote",
+                #     # "client_subnet": "114.114.114.114" // Any China client IP address
+                # },
             ]
             + (
                 [
                     {
-                        "inbound": "tun",
                         "query_type": ["A", "AAAA"],
                         "rewrite_ttl": 1,
                         "server": "dns-fakeip",
@@ -781,8 +796,9 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
                 if args.fakeip
                 else []
             )
-            + [{"rule_set": "geosite-geolocation-!cn", "server": "dns-remote"}],
-            "final": "dns-direct",
+            # + [{"rule_set": "geosite-geolocation-!cn", "server": "dns-remote"}]
+            ,
+            "final": "dns-remote",
             "fakeip": {
                 "enabled": args.fakeip,
                 "inet4_range": "198.18.0.0/15",
@@ -809,9 +825,9 @@ with open("mixed.yaml", "r", encoding="utf-8") as file, open(
                 simple_version_rules if args.simple else rules_with_rule_set,
             ),
             "rules": get_route_rules(
-                rule_config=simple_version_rules
-                if args.simple
-                else rules_with_rule_set,
+                rule_config=(
+                    simple_version_rules if args.simple else rules_with_rule_set
+                ),
             ),
         },
     }
