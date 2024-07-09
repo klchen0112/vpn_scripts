@@ -1,25 +1,32 @@
+import requests
 import yaml
 import json
 import copy
 import argparse
+import requests
 import re
 
 parser = argparse.ArgumentParser(description="")
 
-parser.add_argument("-z", "--zju", help="whether use zju", action="store_true")
-parser.add_argument("--six", help="whether to use ipv6", action="store_true")
-parser.add_argument("--simple", help="use simple version", action="store_true")
+parser.add_argument("--use_v6", help="whether to use ipv6", action="store_true")
+parser.add_argument("--config", help="which config use", type=str, default="simple")
 parser.add_argument("--tun", help="use tun", action="store_true")
 parser.add_argument("--mixed", help="use mixed outbound", action="store_true")
 parser.add_argument("--lan", help="use lan mode", action="store_true")
 parser.add_argument("--docker", help="docker version", action="store_true")
-parser.add_argument("--fakeip", action="store_true")
+parser.add_argument(
+    "--dns_direct", help="docker version", type=str, default="https://doh.pub/dns-query"
+)
+parser.add_argument(
+    "--dns_remote",
+    help="docker version",
+    type=str,
+    default="https://cloudflare-dns.com/dns-query",
+)
 args = parser.parse_args()
 
-use_zju = args.zju
 
-
-url_test_base = {
+URL_TEST_BASE = {
     "type": "urltest",
     "tag": "",
     "outbounds": [],
@@ -130,7 +137,7 @@ def process_proxy(proxy):
         raise ValueError("Wrong proxy type")
 
 
-place_patterns = {
+PLACE_PATTERNS = {
     "🇭🇰 香港": r"🇭🇰|香港|港|hongkong",
     "🇺🇸 美国": r"🇺🇸|美国|united states",
     "🇹🇼 台湾": r"🇹🇼|台湾",
@@ -157,25 +164,22 @@ place_patterns = {
     "🇨🇱 智利": r"🇨🇱|智利",
     "🇨🇴 哥伦比亚": r"🇨🇴|哥伦比亚",
     "🇳🇬 尼日利亚": r"🇳🇬|尼日利亚",
+    "🇨🇦 加拿大": r"🇨🇦|加拿大",
+    "🇸🇪 瑞典": r"🇸🇪|瑞典",
+    "🇨🇭 瑞士": r"🇨🇭|瑞士",
 }
 
-
-zju_dns = "10.10.0.21"
-zju_domains = []
-
-log_settings = {
+LOG_SETTINGS = {
     "disabled": False,
     "level": "warn",
     # "output": "box.log",
     "timestamp": True,
 }
-global_detour = "✈️ Proxy"
+GLOBAL_DETOUR = "✈️ Proxy"
 
 
 def get_rule_set_url(rule_type: str, name: str):
-    if rule_type == "own":
-        url = f"https://raw.githubusercontent.com/klchen0112/vpn_scripts/master/singbox/{name}.json"
-    elif rule_type == "geosite":
+    if rule_type == "geosite":
         url = f"https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-{name}.srs"
     elif rule_type == "geoip":
         url = f"https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-{name}.srs"
@@ -185,8 +189,8 @@ def get_rule_set_url(rule_type: str, name: str):
         "tag": f"{rule_type}-{name}",
         "type": "remote",
         "url": url,
-        "download_detour": global_detour,
-        "format": "source" if rule_type == "own" else "binary",
+        "download_detour": "节点选择",
+        "format": "binary",
     }
 
 
@@ -209,9 +213,9 @@ def get_route_rules(rule_config):
     route_rules = []
     route_rules.append({"protocol": "dns", "outbound": "dns"})
     route_rules.append({"protocol": ["stun", "quic"], "outbound": "🛑 Block"})
-    rule_types = ("geoip", "geosite", "own")
+    rule_types = ("geoip", "geosite")
     for key, value in rule_config.items():
-        if key == global_detour:
+        if key == GLOBAL_DETOUR:
             continue
         if "clash_mode" in value:
             outbound = value["outbound"]
@@ -241,10 +245,8 @@ def get_route_rules(rule_config):
                     "outbound": outbound,
                 }
             )
-        elif "ip_is_private" in value:
-            route_rules.append(
-                {"ip_is_private": value["ip_is_private"], "outbound": value["outbound"]}
-            )
+
+    route_rules.append({"ip_is_private": True, "outbound": "direct"})
     return route_rules
 
 
@@ -257,7 +259,7 @@ def get_outbounds(rule_config, place_outbound):
         for bound in bounds:
             all_bound_name.append(bound["tag"])
     for key, value in rule_config.items():
-        if key == global_detour:
+        if key == GLOBAL_DETOUR:
             outbounds.append(
                 {
                     "tag": key,
@@ -307,7 +309,7 @@ def get_outbounds(rule_config, place_outbound):
                 }
             )
     for name, place_outbounds in place_outbound.items():
-        url_place = copy.deepcopy(url_test_base)
+        url_place = copy.deepcopy(URL_TEST_BASE)
         url_place["tag"] = name
         for outbound in place_outbounds:
             url_place["outbounds"].append(outbound["tag"])
@@ -319,29 +321,28 @@ def get_outbounds(rule_config, place_outbound):
 
 # 如果 outbound不为1那么就流量转自key
 rules_with_rule_set = {
-    global_detour: {
+    GLOBAL_DETOUR: {
         "type": "selector",
-        "outbounds": ["地区测速", "地区选择", "节点选择", "direct"],
-        "default": "地区测速",
+        "outbounds": ["地区选择", "节点选择", "direct"],
+        "default": "节点选择",
     },
-    "clash_global": {"clash_mode": "global", "outbound": global_detour},
+    "clash_global": {"clash_mode": "global", "outbound": GLOBAL_DETOUR},
     "clash_direct": {"clash_mode": "direct", "outbound": "🎯 Direct"},
     "direct": {"type": "direct"},
     "dns": {"type": "dns"},
     "block": {"type": "block"},
-    "ip_is_private": {"ip_is_private": True, "outbound": "🎯 Direct"},
     "private": {
         "geosite": ["private"],
         "outbound": "direct",
     },
     "🎯 Direct": {
         "type": "selector",
-        "outbounds": ["direct", global_detour],
+        "outbounds": ["direct", GLOBAL_DETOUR],
         "default": "direct",
     },
     "🛑 Block": {
         "type": "selector",
-        "outbounds": ["block", "direct", global_detour],
+        "outbounds": ["block", "direct", GLOBAL_DETOUR],
         "default": "block",
     },
     "󱤫 广告过滤": {
@@ -350,38 +351,38 @@ rules_with_rule_set = {
         "outbounds": ["🛑 Block", "🎯 Direct"],
         "default": "🛑 Block",
     },
-    "🤖 OpenAI": {
+    "🤖 AI": {
         "type": "selector",
         "geosite": ["openai"],
-        "outbounds": ["🇺🇸 美国", global_detour, "🎯 Direct"],
+        "outbounds": ["🇺🇸 美国", "🎯 Direct"],
         "default": "🇺🇸 美国",
     },
     " Dev-CN": {
         "type": "selector",
         "geosite": ["category-dev-cn"],
-        "outbounds": ["🎯 Direct", global_detour],
+        "outbounds": ["🎯 Direct", GLOBAL_DETOUR],
         "default": "🎯 Direct",
     },
     " Dev-Global": {
         "type": "selector",
         "geosite": ["category-dev", "category-container"],
-        "outbounds": [global_detour, "🎯 Direct"],
-        "default": global_detour,
+        "outbounds": [GLOBAL_DETOUR, "🎯 Direct"],
+        "default": GLOBAL_DETOUR,
     },
     "Schoolar CN": {
         "type": "selector",
         "geosite": ["category-scholar-cn", "category-education-cn"],
-        "outbounds": ["🎯 Direct", global_detour],
+        "outbounds": ["🎯 Direct", GLOBAL_DETOUR],
         "default": "🎯 Direct",
     },
     "󰑴 Schoolar Global": {
         "type": "selector",
         "geosite": ["category-scholar-!cn"],
         "outbounds": [
-            global_detour,
+            GLOBAL_DETOUR,
             "🎯 Direct",
         ],
-        "default": global_detour,
+        "default": GLOBAL_DETOUR,
     },
     "ZJU": {
         "own": ["zju"],
@@ -392,7 +393,7 @@ rules_with_rule_set = {
         "geosite": ["google@cn"],
         "outbounds": [
             "🎯 Direct",
-            global_detour,
+            GLOBAL_DETOUR,
         ],
         "default": "🎯 Direct",
     },
@@ -400,13 +401,13 @@ rules_with_rule_set = {
         "type": "selector",
         "geosite": ["google"],
         # "geoip": ["google"],
-        "outbounds": [global_detour, "🎯 Direct"],
-        "default": global_detour,
+        "outbounds": [GLOBAL_DETOUR, "🎯 Direct"],
+        "default": GLOBAL_DETOUR,
     },
     "Social Media CN": {
         "type": "selector",
         "geosite": ["category-social-media-cn"],
-        "outbounds": ["🎯 Direct", global_detour],
+        "outbounds": ["🎯 Direct", GLOBAL_DETOUR],
         "default": "🎯 Direct",
     },
     " Social Media Global": {
@@ -414,26 +415,26 @@ rules_with_rule_set = {
         "geosite": ["category-social-media-!cn", "category-communication"],
         # "geoip": ["telegram", "twitter", "facebook"],
         "outbounds": [
-            global_detour,
+            GLOBAL_DETOUR,
             "🎯 Direct",
         ],
-        "default": global_detour,
+        "default": GLOBAL_DETOUR,
     },
     "󰒚 Shopping": {
         "type": "selector",
         "geosite": ["amazon"],
         "outbounds": [
-            global_detour,
+            GLOBAL_DETOUR,
             "🎯 Direct",
         ],
-        "default": global_detour,
+        "default": GLOBAL_DETOUR,
     },
     "Ⓜ️ Microsoft CN": {
         "type": "selector",
         "geosite": ["microsoft@cn"],
         "outbounds": [
             "🎯 Direct",
-            global_detour,
+            GLOBAL_DETOUR,
         ],
         "default": "🎯 Direct",
     },
@@ -441,17 +442,17 @@ rules_with_rule_set = {
         "type": "selector",
         "geosite": ["microsoft"],
         "outbounds": [
-            global_detour,
+            GLOBAL_DETOUR,
             "🎯 Direct",
         ],
-        "default": global_detour,
+        "default": GLOBAL_DETOUR,
     },
     "🍎 Apple CN": {
         "type": "selector",
         "geosite": ["apple@cn"],
         "outbounds": [
             "🎯 Direct",
-            global_detour,
+            GLOBAL_DETOUR,
         ],
         "default": "🎯 Direct",
     },
@@ -459,25 +460,25 @@ rules_with_rule_set = {
         "type": "selector",
         "geosite": ["apple"],
         "outbounds": [
-            global_detour,
+            GLOBAL_DETOUR,
             "🎯 Direct",
         ],
-        "default": global_detour,
+        "default": GLOBAL_DETOUR,
     },
     "󱎓 Game CN": {
         "type": "selector",
         "geosite": ["category-games@cn", "category-game-accelerator-cn"],
         "outbounds": [
             "🎯 Direct",
-            global_detour,
+            GLOBAL_DETOUR,
         ],
         "default": "🎯 Direct",
     },
     "🎮 Game Global": {
         "type": "selector",
         "geosite": ["category-games"],
-        "outbounds": ["🇯🇵 日本", "🇭🇰 香港", "🇹🇼 台湾", global_detour, "🎯 Direct"],
-        "default": global_detour,
+        "outbounds": ["🇯🇵 日本", "🇭🇰 香港", GLOBAL_DETOUR, "🎯 Direct"],
+        "default": GLOBAL_DETOUR,
     },
     "哔哩哔哩": {
         "type": "selector",
@@ -486,7 +487,7 @@ rules_with_rule_set = {
             "🎯 Direct",
             "🇹🇼 台湾",
             "🇭🇰 香港",
-            global_detour,
+            GLOBAL_DETOUR,
         ],
         "default": "🎯 Direct",
     },
@@ -496,7 +497,7 @@ rules_with_rule_set = {
         "outbounds": [
             "🇹🇼 台湾",
             "🇭🇰 香港",
-            global_detour,
+            GLOBAL_DETOUR,
             "🎯 Direct",
         ],
         "default": "🇹🇼 台湾",
@@ -506,7 +507,7 @@ rules_with_rule_set = {
         "geosite": ["category-media-cn"],
         "outbounds": [
             "🎯 Direct",
-            global_detour,
+            GLOBAL_DETOUR,
         ],
         "default": "🎯 Direct",
     },
@@ -518,19 +519,19 @@ rules_with_rule_set = {
             "category-entertainment",
         ],
         "outbounds": [
-            global_detour,
+            GLOBAL_DETOUR,
             "🎯 Direct",
         ],
-        "default": global_detour,
+        "default": GLOBAL_DETOUR,
     },
     "🟨 Porn": {
         "type": "selector",
         "geosite": ["category-porn"],
         "outbounds": [
-            global_detour,
+            GLOBAL_DETOUR,
             "🎯 Direct",
         ],
-        "default": global_detour,
+        "default": GLOBAL_DETOUR,
     },
     # " Global": {
     #     "type": "selector",
@@ -544,22 +545,22 @@ rules_with_rule_set = {
     "🇨🇳 CNIP": {
         "type": "selector",
         "geoip": ["cn"],
-        "geosite": ["cn"],
+        "geosite": ["geolocation-cn"],
         "outbounds": [
             "🎯 Direct",
-            global_detour,
+            GLOBAL_DETOUR,
         ],
         "default": "🎯 Direct",
     },
 }
 
 simple_version_rules = {
-    global_detour: {
+    GLOBAL_DETOUR: {
         "type": "selector",
-        "outbounds": ["地区测速", "地区选择", "节点选择", "direct"],
-        "default": "地区测速",
+        "outbounds": ["地区选择", "节点选择", "direct"],
+        "default": "节点选择",
     },
-    "clash_global": {"clash_mode": "global", "outbound": global_detour},
+    "clash_global": {"clash_mode": "global", "outbound": GLOBAL_DETOUR},
     "clash_direct": {"clash_mode": "direct", "outbound": "🎯 Direct"},
     "direct": {"type": "direct"},
     "dns": {"type": "dns"},
@@ -567,7 +568,7 @@ simple_version_rules = {
     "ip_is_private": {"ip_is_private": True, "outbound": "🎯 Direct"},
     "🎯 Direct": {
         "type": "selector",
-        "outbounds": ["direct", global_detour],
+        "outbounds": ["direct", GLOBAL_DETOUR],
         "default": "direct",
     },
     "󱤫 广告过滤": {
@@ -578,20 +579,19 @@ simple_version_rules = {
     },
     "🛑 Block": {
         "type": "selector",
-        "outbounds": ["block", "direct", global_detour],
+        "outbounds": ["block", "direct", GLOBAL_DETOUR],
         "default": "block",
     },
-    "ZJU": {
-        "own": ["zju"],
+    "LOCAL_DOMAIN": {
         "outbound": "🎯 Direct",
     },
     "🇨🇳 CNIP": {
         "type": "selector",
         "geoip": ["cn"],
-        "geosite": ["cn"],
+        "geosite": ["geolocation-cn"],
         "outbounds": [
             "🎯 Direct",
-            global_detour,
+            GLOBAL_DETOUR,
         ],
         "default": "🎯 Direct",
     },
@@ -607,7 +607,9 @@ single_selecor = {
 }
 
 
-def get_inbounds(use_tun, use_mixed, use_v6, listen_lan, docker):
+def get_inbounds(
+    use_tun: bool, use_mixed: bool, use_v6: bool, listen_lan: bool, docker
+):
     result = []
     if use_mixed:
         result.append(
@@ -645,192 +647,186 @@ def get_inbounds(use_tun, use_mixed, use_v6, listen_lan, docker):
     return result
 
 
-with open("mixed.yaml", "r", encoding="utf-8") as file, open(
-    "result{}{}{}{}{}{}{}.json".format(
-        "_lan" if args.lan else "",
-        "_zju" if use_zju else "",
-        "_v6" if args.six else "_v4",
-        "_simple" if args.simple else "",
-        "_tun" if args.tun else "",
-        "_mixed" if args.mixed else "",
-        "_fakeip" if args.fakeip else "",
-    ),
-    "w",
-    encoding="utf-8",
-) as result_file:
-    if not args.zju:
-        rules_with_rule_set.pop("ZJU")
-        simple_version_rules.pop("ZJU")
+def get_dns_configs(local_domain_list, dns_direct, dns_remote, use_v6):
+    dns_config = {}
 
-    data = yaml.load(file.read(), Loader=yaml.FullLoader)
-    place_outbound = dict()
+    # build servers
+    dns_config["servers"] = [
+        {
+            "tag": "dns-remote",
+            "address": dns_remote,
+            "detour": GLOBAL_DETOUR,
+            "address_resolver": "dns-system",
+            "client_subnet": "114.114.114.114",
+        },
+        {
+            "tag": "dns-direct",
+            "address": dns_direct,
+            "detour": "direct",
+            "address_resolver": "dns-system",
+        },
+        {
+            "tag": "dns-system",
+            "address": "dhcp://auto",
+            "detour": "direct",
+        },
+        {"tag": "dns-block", "address": "rcode://success"},
+    ]
 
-    for proxy in data["proxies"]:
-        flag = True
-        for place_name, place_pattern in place_patterns.items():
-            if re.search(place_pattern, proxy["name"]):
-                if place_name not in place_outbound:
-                    place_outbound[place_name] = []
-                place_outbound[place_name].append(
-                    copy.deepcopy(process_proxy(proxy=proxy))
-                )
-                flag = False
+    # build rules
+    dns_config["rules"] = [
+        {"outbound": "any", "server": "dns-direct", "disable_cache": True},
+        {"clash_mode": "direct", "server": "dns-direct"},
+        {
+            "clash_mode": "global",
+            "server": "dns-remote",
+        },
+        {
+            "domain": [
+                "ghproxy.com",
+                "cdn.jsdelivr.net",
+                "testingcf.jsdelivr.net",
+            ],
+            "server": "dns-direct",
+        },
+        {
+            "rule_set": "geosite-category-ads-all",
+            # 追踪域名DNS解析被黑洞
+            "domain_suffix": [
+                "appcenter.ms",
+                "app-measurement.com",
+                "firebase.io",
+                "crashlytics.com",
+                "google-analytics.com",
+            ],
+            "server": "dns-block",
+            "disable_cache": True,
+        },
+        {
+            "domain_suffix": copy.deepcopy(local_domain_list),
+            "domain": copy.deepcopy(local_domain_list),
+            "server": "dns-system",
+        },
+        {"rule_set": "geosite-geolocation-cn", "server": "dns-direct"},
+    ]
+
+    dns_config["final"] = "dns-remote"
+    dns_config["independent_cache"] = True
+    dns_config["strategy"] = "prefer_ipv4" if use_v6 else "ipv4_only"
+    return dns_config
+
+
+if __name__ == "__main__":
+
+    black_list = ["机场", "订阅", "流量", "套餐", "重置", "电报群", "官网", "去除"]
+    proxies = []
+    with open("airport.txt", "r") as fp:
+        headers = {"User-Agent": "clash-verge/v1.3.8"}
+        result_dict = {"proxies": []}
+        for line in fp.readlines():
+            url = line.strip()
+            if len(url) == 0:
                 break
-        if flag:
-            print(proxy)
-    result_json = {
-        "log": log_settings,
-        "experimental": {
-            "clash_api": {
-                "external_controller": "0.0.0.0:9090" if args.lan else "127.0.0.1:9090",
-                "external_ui": "ui",
-                "default_mode": "rule",
-                "external_ui_download_url": "https://mirror.ghproxy.com/https://github.com/MetaCubeX/metacubexd/archive/gh-pages.zip",
-                "external_ui_download_detour": "direct",
-            },
-            "cache_file": {"enabled": True, "store_fakeip": False},
-        },
-        "dns": {
-            "servers": [
-                {
-                    "tag": "dns-remote",
-                    "address": "https://9.9.9.9/dns-query",
-                    "detour": global_detour,
-                },
-                {
-                    "tag": "dns-direct",
-                    "address": "https://120.53.53.53/dns-query",
-                    "detour": "direct",
-                },
-            ]
-            + (
-                []
-                if not use_zju
-                else [
-                    {
-                        # zju 所用的dns
-                        "tag": "dns-zju",
-                        "address": zju_dns,
-                        "detour": "direct",
-                    },
-                ]
-            )
-            + [
-                {"tag": "dns-block", "address": "rcode://success"},
-            ]
-            + (
-                []
-                if not args.fakeip
-                else [
-                    {
-                        "tag": "dns-fakeip",
-                        "address": "fakeip",
-                    },
-                ]
-            ),
-            "rules": [
-                {
-                    "domain": [
-                        "ghproxy.com",
-                        "cdn.jsdelivr.net",
-                        "testingcf.jsdelivr.net",
-                    ],
-                    "server": "dns-fakeip" if args.fakeip else "dns-direct",
-                },
-                {
-                    "rule_set": "geosite-category-ads-all",
-                    # 追踪域名DNS解析被黑洞
-                    "domain_suffix": [
-                        "appcenter.ms",
-                        "app-measurement.com",
-                        "firebase.io",
-                        "crashlytics.com",
-                        "google-analytics.com",
-                    ],
-                    "server": "dns-block",
-                    "disable_cache": True,
-                },
-            ]
-            + (
-                []
-                if not use_zju
-                else [
-                    {
-                        "rule_set": "own-zju",
-                        "server": "dns-zju",
-                    },
-                ]
-            )
-            + [
-                {"outbound": "any", "server": "dns-direct", "disable_cache": True},
-                {"rule_set": "geosite-cn", "server": "dns-direct"},
-                {"clash_mode": "direct", "server": "dns-direct"},
-                {
-                    "clash_mode": "global",
-                    "server": "dns-fakeip" if args.fakeip else "dns-remote",
-                },
-                {"rule_set": "geosite-cn", "server": "dns-direct"},
-                # {
-                #     "type": "logical",
-                #     "mode": "and",
-                #     "rules": [
-                #         {
-                #             "rule_set": "geosite-geolocation-!cn",
-                #             "invert": True,
-                #         },
-                #         {
-                #             "rule_set": "geoip-cn"
-                #         }
-                #     ],
-                #     "server": "dns-remote",
-                #     # "client_subnet": "114.114.114.114" // Any China client IP address
-                # },
-            ]
-            + (
-                [
-                    {
-                        "query_type": ["A", "AAAA"],
-                        "rewrite_ttl": 1,
-                        "server": "dns-fakeip",
-                    },
-                ]
-                if args.fakeip
-                else []
-            )
-            # + [{"rule_set": "geosite-geolocation-!cn", "server": "dns-remote"}]
-            ,
-            "final": "dns-remote",
-            "fakeip": {
-                "enabled": args.fakeip,
-                "inet4_range": "198.18.0.0/15",
-                **({"inet6_range": "fc00::/18"} if args.six else {}),
-            },
-            "independent_cache": True,
-            "strategy": "prefer_ipv4" if args.six else "ipv4_only",
-        },
-        "inbounds": get_inbounds(
-            use_tun=args.tun,
-            use_mixed=args.mixed,
-            use_v6=args.six,
-            listen_lan=args.lan,
-            docker=args.docker,
-        ),
-        "outbounds": get_outbounds(
-            rule_config=simple_version_rules if args.simple else rules_with_rule_set,
-            place_outbound=place_outbound,
-        ),
-        "route": {
-            "auto_detect_interface": True,  # 如果您是Linux、Windows 和 macOS用户，请将此条注释撤销，使 final 其生效，以免造成问题（上一行记得加,）
-            "final": global_detour,
-            "rule_set": get_rule_set(
-                simple_version_rules if args.simple else rules_with_rule_set,
-            ),
-            "rules": get_route_rules(
-                rule_config=(
-                    simple_version_rules if args.simple else rules_with_rule_set
-                ),
-            ),
-        },
-    }
+            # 发送HTTPS请求并获取响应
+            response = requests.get(
+                url=url, headers=headers
+            )  # 用你的API端点替换这里的URL
 
-    result_file.write(json.dumps(result_json, ensure_ascii=False))
+            # 使用PyYAML解析响应的内容
+            data = yaml.safe_load(response.text)
+            for proxy in data["proxies"]:
+                flag = True
+                for bn in black_list:
+                    if bn in proxy["name"]:
+                        flag = False
+                        break
+                if flag:
+                    proxies.append(proxy)
+    #         # 现在，变量'data'包local_domain_list含了从HTTPS响应中解析出的数据
+
+    local_domain_list = []
+    with open("localdomain.txt", "r") as local_domain_file:
+        for domain in local_domain_file.readlines():
+            print(type(domain))
+            local_domain_list.append(domain.strip())
+
+    with open("mixed.yaml", "r", encoding="utf-8") as file, open(
+        "result{}{}{}{}.json".format(
+            "_lan" if args.lan else "",
+            "_v6" if args.use_v6 else "_v4",
+            "_tun" if args.tun else "",
+            "_mixed" if args.mixed else "",
+        ),
+        "w",
+        encoding="utf-8",
+    ) as result_file:
+        place_outbound = dict()
+
+        for proxy in proxies:
+            flag = True
+            for place_name, place_pattern in PLACE_PATTERNS.items():
+                if re.search(place_pattern, proxy["name"]):
+                    if place_name not in place_outbound:
+                        place_outbound[place_name] = []
+                    place_outbound[place_name].append(
+                        copy.deepcopy(process_proxy(proxy=proxy))
+                    )
+                    flag = False
+                    break
+            if flag:
+                print(proxy)
+        result_json = {
+            "log": LOG_SETTINGS,
+            "experimental": {
+                "clash_api": {
+                    "external_controller": (
+                        "0.0.0.0:9090" if args.lan else "127.0.0.1:9090"
+                    ),
+                    "external_ui": "ui",
+                    "default_mode": "rule",
+                    "external_ui_download_url": "https://mirror.ghproxy.com/https://github.com/MetaCubeX/metacubexd/archive/gh-pages.zip",
+                    "external_ui_download_detour": "direct",
+                },
+                "cache_file": {"enabled": True, "store_fakeip": False},
+            },
+            "dns": get_dns_configs(
+                local_domain_list=local_domain_list,
+                dns_direct=args.dns_direct,
+                dns_remote=args.dns_remote,
+                use_v6=args.use_v6,
+            ),
+            "inbounds": get_inbounds(
+                use_tun=args.tun,
+                use_mixed=args.mixed,
+                use_v6=args.use_v6,
+                listen_lan=args.lan,
+                docker=args.docker,
+            ),
+            "outbounds": get_outbounds(
+                rule_config=(
+                    simple_version_rules
+                    if args.config == "simple"
+                    else rules_with_rule_set
+                ),
+                place_outbound=place_outbound,
+            ),
+            "route": {
+                "auto_detect_interface": True,  # 如果您是Linux、Windows 和 macOS用户，请将此条注释撤销，使 final 其生效，以免造成问题（上一行记得加,）
+                "final": GLOBAL_DETOUR,
+                "rule_set": get_rule_set(
+                    (
+                        simple_version_rules
+                        if args.config == "simple"
+                        else rules_with_rule_set
+                    ),
+                ),
+                "rules": get_route_rules(
+                    rule_config=(
+                        simple_version_rules
+                        if args.config == "simple"
+                        else rules_with_rule_set
+                    ),
+                ),
+            },
+        }
+        result_file.write(json.dumps(result_json, ensure_ascii=False))
