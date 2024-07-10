@@ -49,7 +49,7 @@ def process_proxy(proxy):
         result = copy.deepcopy(ss_server_base)
         result["tag"] = proxy["name"]
         result["server"] = proxy["server"]
-        result["server_port"] = proxy["port"]
+        result["server_port"] = int(proxy["port"])
         result["method"] = proxy["cipher"]
         result["password"] = proxy["password"]
         return result
@@ -64,7 +64,7 @@ def process_proxy(proxy):
         result = copy.deepcopy(trojan_server_base)
         result["tag"] = proxy["name"]
         result["server"] = proxy["server"]
-        result["server_port"] = proxy["port"]
+        result["server_port"] = int(proxy["port"])
         result["password"] = proxy["password"]
         if "sni" in proxy:
             result["tls"] = {
@@ -95,7 +95,7 @@ def process_proxy(proxy):
         result = copy.deepcopy(vmess_server_base)
         result["tag"] = proxy["name"]
         result["server"] = proxy["server"]
-        result["server_port"] = proxy["port"]
+        result["server_port"] = int(proxy["port"])
         result["uuid"] = proxy["uuid"]
         result["alter_id"] = proxy["alterId"]
         result["security"] = proxy["cipher"]
@@ -128,7 +128,7 @@ def process_proxy(proxy):
         }
         hysteria2_server_base["tag"] = proxy["name"]
         hysteria2_server_base["server"] = proxy["server"]
-        hysteria2_server_base["server_port"] = proxy["port"]
+        hysteria2_server_base["server_port"] = int(proxy["port"])
         hysteria2_server_base["password"] = proxy["password"]
         hysteria2_server_base["up_mbps"] = proxy["up"]
         hysteria2_server_base["down_mbps"] = proxy["down"]
@@ -326,8 +326,8 @@ rules_with_rule_set = {
         "outbounds": ["地区选择", "节点选择", "direct"],
         "default": "节点选择",
     },
-    "clash_global": {"clash_mode": "global", "outbound": GLOBAL_DETOUR},
-    "clash_direct": {"clash_mode": "direct", "outbound": "🎯 Direct"},
+    "clash_global": {"clash_mode": "Global", "outbound": GLOBAL_DETOUR},
+    "clash_direct": {"clash_mode": "Direct", "outbound": "🎯 Direct"},
     "direct": {"type": "direct"},
     "dns": {"type": "dns"},
     "block": {"type": "block"},
@@ -383,10 +383,6 @@ rules_with_rule_set = {
             "🎯 Direct",
         ],
         "default": GLOBAL_DETOUR,
-    },
-    "ZJU": {
-        "own": ["zju"],
-        "outbound": "🎯 Direct",
     },
     "󰊭 Google CN": {
         "type": "selector",
@@ -546,6 +542,7 @@ rules_with_rule_set = {
         "type": "selector",
         "geoip": ["cn"],
         "geosite": ["geolocation-cn"],
+        "own": ["local_domain_list"],
         "outbounds": [
             "🎯 Direct",
             GLOBAL_DETOUR,
@@ -560,12 +557,18 @@ simple_version_rules = {
         "outbounds": ["地区选择", "节点选择", "direct"],
         "default": "节点选择",
     },
-    "clash_global": {"clash_mode": "global", "outbound": GLOBAL_DETOUR},
-    "clash_direct": {"clash_mode": "direct", "outbound": "🎯 Direct"},
+    "dns-catch": {
+        "type": "logical",
+        "model": "or",
+        "rules": [{"protocol": "dns"}, {"port": 53}],
+        "outbound": "dns",
+    },
+    "ip_is_private": {"ip_is_private": True, "outbound": "🎯 Direct"},
+    "clash_global": {"clash_mode": "Global", "outbound": GLOBAL_DETOUR},
+    "clash_direct": {"clash_mode": "Direct", "outbound": "🎯 Direct"},
     "direct": {"type": "direct"},
     "dns": {"type": "dns"},
     "block": {"type": "block"},
-    "ip_is_private": {"ip_is_private": True, "outbound": "🎯 Direct"},
     "🎯 Direct": {
         "type": "selector",
         "outbounds": ["direct", GLOBAL_DETOUR],
@@ -589,6 +592,7 @@ simple_version_rules = {
         "type": "selector",
         "geoip": ["cn"],
         "geosite": ["geolocation-cn"],
+        "own": ["local_domain_list"],
         "outbounds": [
             "🎯 Direct",
             GLOBAL_DETOUR,
@@ -657,7 +661,7 @@ def get_dns_configs(local_domain_list, dns_direct, dns_remote, use_v6):
             "address": dns_remote,
             "detour": GLOBAL_DETOUR,
             "address_resolver": "dns-system",
-            "client_subnet": "114.114.114.114",
+            "client_subnet": "114.114.114.114/24",
         },
         {
             "tag": "dns-direct",
@@ -676,9 +680,9 @@ def get_dns_configs(local_domain_list, dns_direct, dns_remote, use_v6):
     # build rules
     dns_config["rules"] = [
         {"outbound": "any", "server": "dns-direct", "disable_cache": True},
-        {"clash_mode": "direct", "server": "dns-direct"},
+        {"clash_mode": "Direct", "server": "dns-direct"},
         {
-            "clash_mode": "global",
+            "clash_mode": "Global",
             "server": "dns-remote",
         },
         {
@@ -783,7 +787,7 @@ if __name__ == "__main__":
                         "0.0.0.0:9090" if args.lan else "127.0.0.1:9090"
                     ),
                     "external_ui": "ui",
-                    "default_mode": "rule",
+                    "default_mode": "Enhanced",
                     "external_ui_download_url": "https://mirror.ghproxy.com/https://github.com/MetaCubeX/metacubexd/archive/gh-pages.zip",
                     "external_ui_download_detour": "direct",
                 },
