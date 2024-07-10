@@ -35,6 +35,8 @@ URL_TEST_BASE = {
     "tolerance": 50,
 }
 
+local_RULES = {}
+
 
 def process_proxy(proxy):
     if proxy["type"] == "ss":
@@ -183,6 +185,12 @@ def get_rule_set_url(rule_type: str, name: str):
         url = f"https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-{name}.srs"
     elif rule_type == "geoip":
         url = f"https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-{name}.srs"
+    elif rule_type == "inline":
+        return {
+            "tag": f"{rule_type}-{name}",
+            "type": "inline",
+            "rules": [local_RULES[f"{rule_type}-{name}"]],
+        }
     else:
         raise ValueError("Wrong rule_type")
     return {
@@ -196,16 +204,23 @@ def get_rule_set_url(rule_type: str, name: str):
 
 def get_rule_set(rule_config):
     rule_sets = []
+
+    find = False
     for key, value in rule_config.items():
         if "geosite" in value:
             for name in value["geosite"]:
                 rule_sets.append(get_rule_set_url(rule_type="geosite", name=name))
+                if name == "geolocation-!cn":
+                    find = True
         if "geoip" in value:
             for name in value["geoip"]:
                 rule_sets.append(get_rule_set_url(rule_type="geoip", name=name))
-        if "own" in value:
-            for name in value["own"]:
-                rule_sets.append(get_rule_set_url(rule_type="own", name=name))
+        if "inline" in value:
+            for name in value["inline"]:
+                rule_sets.append(get_rule_set_url(rule_type="inline", name=name))
+    if not find:
+        rule_sets.append(get_rule_set_url(rule_type="geosite", name="geolocation-!cn"))
+
     return rule_sets
 
 
@@ -245,8 +260,17 @@ def get_route_rules(rule_config):
                     "outbound": outbound,
                 }
             )
-
-    route_rules.append({"ip_is_private": True, "outbound": "direct"})
+        elif "type" in value and value["type"] == "logical":
+            route_rules.append(
+                {
+                    "type": "logical",
+                    "mode": value["model"],
+                    "rules": [{"protocol": "dns"}, {"port": 53}],
+                    "outbound": "dns",
+                }
+            )
+        elif "ip_is_private" in value:
+            route_rules.append({"ip_is_private": True, "outbound": "direct"})
     return route_rules
 
 
@@ -321,19 +345,26 @@ def get_outbounds(rule_config, place_outbound):
 
 # 如果 outbound不为1那么就流量转自key
 rules_with_rule_set = {
-    GLOBAL_DETOUR: {
-        "type": "selector",
-        "outbounds": ["地区选择", "节点选择", "direct"],
-        "default": "节点选择",
+    "dns-catch": {
+        "type": "logical",
+        "model": "or",
+        "rules": [{"protocol": "dns"}, {"port": 53}],
+        "outbound": "dns",
     },
-    "clash_global": {"clash_mode": "Global", "outbound": GLOBAL_DETOUR},
+    "ip_is_private": {"ip_is_private": True, "outbound": "🎯 Direct"},
+    "clash_global": {"clash_mode": "Global", "outbound": "节点选择"},
     "clash_direct": {"clash_mode": "Direct", "outbound": "🎯 Direct"},
+    "LOCAL_DOMAIN": {
+        "inline": ["localdomain"],
+        "outbound": "🎯 Direct",
+    },
     "direct": {"type": "direct"},
     "dns": {"type": "dns"},
     "block": {"type": "block"},
-    "private": {
-        "geosite": ["private"],
-        "outbound": "direct",
+    GLOBAL_DETOUR: {
+        "type": "selector",
+        "outbounds": ["地区测速", "地区选择", "节点选择", "direct"],
+        "default": "地区测速",
     },
     "🎯 Direct": {
         "type": "selector",
@@ -552,11 +583,6 @@ rules_with_rule_set = {
 }
 
 simple_version_rules = {
-    GLOBAL_DETOUR: {
-        "type": "selector",
-        "outbounds": ["地区选择", "节点选择", "direct"],
-        "default": "节点选择",
-    },
     "dns-catch": {
         "type": "logical",
         "model": "or",
@@ -564,8 +590,17 @@ simple_version_rules = {
         "outbound": "dns",
     },
     "ip_is_private": {"ip_is_private": True, "outbound": "🎯 Direct"},
-    "clash_global": {"clash_mode": "Global", "outbound": GLOBAL_DETOUR},
+    "clash_global": {"clash_mode": "Global", "outbound": "节点选择"},
     "clash_direct": {"clash_mode": "Direct", "outbound": "🎯 Direct"},
+    "LOCAL_DOMAIN": {
+        "inline": ["localdomain"],
+        "outbound": "🎯 Direct",
+    },
+    GLOBAL_DETOUR: {
+        "type": "selector",
+        "outbounds": ["地区测速", "地区选择", "节点选择", "direct"],
+        "default": "地区测速",
+    },
     "direct": {"type": "direct"},
     "dns": {"type": "dns"},
     "block": {"type": "block"},
@@ -584,9 +619,6 @@ simple_version_rules = {
         "type": "selector",
         "outbounds": ["block", "direct", GLOBAL_DETOUR],
         "default": "block",
-    },
-    "LOCAL_DOMAIN": {
-        "outbound": "🎯 Direct",
     },
     "🇨🇳 CNIP": {
         "type": "selector",
@@ -651,7 +683,7 @@ def get_inbounds(
     return result
 
 
-def get_dns_configs(local_domain_list, dns_direct, dns_remote, use_v6):
+def get_dns_configs(dns_direct, dns_remote, use_v6):
     dns_config = {}
 
     # build servers
@@ -661,7 +693,6 @@ def get_dns_configs(local_domain_list, dns_direct, dns_remote, use_v6):
             "address": dns_remote,
             "detour": GLOBAL_DETOUR,
             "address_resolver": "dns-system",
-            "client_subnet": "114.114.114.114/24",
         },
         {
             "tag": "dns-direct",
@@ -707,11 +738,20 @@ def get_dns_configs(local_domain_list, dns_direct, dns_remote, use_v6):
             "disable_cache": True,
         },
         {
-            "domain_suffix": copy.deepcopy(local_domain_list),
-            "domain": copy.deepcopy(local_domain_list),
+            "rule_set": ["inline-localdomain"],
             "server": "dns-system",
         },
         {"rule_set": "geosite-geolocation-cn", "server": "dns-direct"},
+        {
+            "type": "logical",
+            "mode": "and",
+            "rules": [
+                {"rule_set": "geosite-geolocation-!cn", "invert": True},
+                {"rule_set": "geoip-cn"},
+            ],
+            "server": "google",
+            "client_subnet": "114.114.114.114/24",
+        },
     ]
 
     dns_config["final"] = "dns-remote"
@@ -751,9 +791,12 @@ if __name__ == "__main__":
     local_domain_list = []
     with open("localdomain.txt", "r") as local_domain_file:
         for domain in local_domain_file.readlines():
-            print(type(domain))
+            print(domain)
             local_domain_list.append(domain.strip())
-
+    local_RULES["inline-localdomain"] = {
+        "domain_suffix": local_domain_list,
+        "domain": local_domain_list,
+    }
     with open("mixed.yaml", "r", encoding="utf-8") as file, open(
         "result{}{}{}{}.json".format(
             "_lan" if args.lan else "",
@@ -794,7 +837,6 @@ if __name__ == "__main__":
                 "cache_file": {"enabled": True, "store_fakeip": False},
             },
             "dns": get_dns_configs(
-                local_domain_list=local_domain_list,
                 dns_direct=args.dns_direct,
                 dns_remote=args.dns_remote,
                 use_v6=args.use_v6,
