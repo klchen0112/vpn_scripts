@@ -7,7 +7,15 @@
 #+begin_src shell
 # 安装必要的包
 pip install requests yaml
-# --six 参数使用ipv6
-# --simple 使用极简配置 只使用geoip cn 和 geosite-cn
-python run.py --zju --six --simple
+# --use_v6 参数使用ipv6
+# --config
+# simple 使用极简配置 只使用geoip cn 和 geosite geolocation-cn geolocation-!cn
+# complex
+# --docker 不使用set system proxy
+# --lan 监听0.0.0.0
+# --tun 虚拟网卡入口
+# --mixed http and socks 代理默认set system proxy
+# --dns_direct 直连dns
+# --dns_remote 远程dns
+python run.py --use_v6 --config
 #+end_src

@@ -16,16 +16,16 @@ parser.add_argument(
     default="simple",
     choices=["simple", "complex"],
 )
-parser.add_argument("--tun", help="use tun", action="store_true")
-parser.add_argument("--mixed", help="use mixed outbound", action="store_true")
+parser.add_argument("--tun", help="use tun inbound", action="store_true")
+parser.add_argument("--mixed", help="use mixed inbound", action="store_true")
 parser.add_argument("--lan", help="use lan mode", action="store_true")
 parser.add_argument("--docker", help="docker version", action="store_true")
 parser.add_argument(
-    "--dns_direct", help="docker version", type=str, default="https://doh.pub/dns-query"
+    "--dns_direct", help="direct dns", type=str, default="https://doh.pub/dns-query"
 )
 parser.add_argument(
     "--dns_remote",
-    help="docker version",
+    help="remote dns",
     type=str,
     default="https://cloudflare-dns.com/dns-query",
 )
