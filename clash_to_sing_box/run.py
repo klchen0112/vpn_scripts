@@ -234,7 +234,7 @@ def get_route_rules(rule_config):
     route_rules = []
     route_rules.append({"protocol": "dns", "outbound": "dns"})
     route_rules.append({"protocol": ["stun", "quic"], "outbound": "🛑 Block"})
-    rule_types = ("geoip", "geosite")
+    rule_types = ("geoip", "geosite", "inline")
     for key, value in rule_config.items():
         if key == GLOBAL_DETOUR:
             continue
@@ -253,7 +253,7 @@ def get_route_rules(rule_config):
                 {"clash_mode": value["clash_mode"], "outbound": outbound}
             )
             continue
-        elif "geosite" in value or "geoip" in value or "own" in value:
+        elif "geosite" in value or "geoip" in value or "inline" in value:
             rule_set = []
             outbound = value["outbound"] if "outbound" in value else key
             for rule_type in rule_types:
@@ -804,8 +804,63 @@ if __name__ == "__main__":
         "domain_suffix": local_domain_list,
         "domain": local_domain_list,
     }
-    with open("mixed.yaml", "r", encoding="utf-8") as file, open(
-        "result{}{}{}{}{}.json".format(
+
+    place_outbound = dict()
+
+    for proxy in proxies:
+        flag = True
+        for place_name, place_pattern in PLACE_PATTERNS.items():
+            if re.search(place_pattern, proxy["name"]):
+                if place_name not in place_outbound:
+                    place_outbound[place_name] = []
+                place_outbound[place_name].append(
+                    copy.deepcopy(process_proxy(proxy=proxy))
+                )
+                flag = False
+                break
+        if flag:
+            print(proxy)
+    result_json = {
+        "log": LOG_SETTINGS,
+        "experimental": {
+            "clash_api": {
+                "external_controller": (
+                    "0.0.0.0:9090" if args.lan else "127.0.0.1:9090"
+                ),
+                "external_ui": "ui",
+                "default_mode": "Enhanced",
+                "external_ui_download_url": "https://mirror.ghproxy.com/https://github.com/MetaCubeX/metacubexd/archive/gh-pages.zip",
+                "external_ui_download_detour": "direct",
+            },
+            "cache_file": {"enabled": True, "store_fakeip": False},
+        },
+        "dns": get_dns_configs(
+            dns_direct=args.dns_direct,
+            dns_remote=args.dns_remote,
+            use_v6=args.use_v6,
+        ),
+        "inbounds": get_inbounds(
+            use_tun=args.tun,
+            use_mixed=args.mixed,
+            use_v6=args.use_v6,
+            listen_lan=args.lan,
+            docker=args.docker,
+        ),
+        "outbounds": get_outbounds(
+            rule_config=(rules[args.config]),
+            place_outbound=place_outbound,
+        ),
+        "route": {
+            "auto_detect_interface": True,  # 如果您是Linux、Windows 和 macOS用户，请将此条注释撤销，使 final 其生效，以免造成问题（上一行记得加,）
+            "final": GLOBAL_DETOUR,
+            "rule_set": get_rule_set(
+                (rules[args.config]),
+            ),
+            "rules": get_route_rules(rule_config=(rules[args.config])),
+        },
+    }
+    with open(
+        "result_{}{}{}{}{}.json".format(
             args.config,
             "_lan" if args.lan else "",
             "_v6" if args.use_v6 else "_v4",
@@ -815,58 +870,4 @@ if __name__ == "__main__":
         "w",
         encoding="utf-8",
     ) as result_file:
-        place_outbound = dict()
-
-        for proxy in proxies:
-            flag = True
-            for place_name, place_pattern in PLACE_PATTERNS.items():
-                if re.search(place_pattern, proxy["name"]):
-                    if place_name not in place_outbound:
-                        place_outbound[place_name] = []
-                    place_outbound[place_name].append(
-                        copy.deepcopy(process_proxy(proxy=proxy))
-                    )
-                    flag = False
-                    break
-            if flag:
-                print(proxy)
-        result_json = {
-            "log": LOG_SETTINGS,
-            "experimental": {
-                "clash_api": {
-                    "external_controller": (
-                        "0.0.0.0:9090" if args.lan else "127.0.0.1:9090"
-                    ),
-                    "external_ui": "ui",
-                    "default_mode": "Enhanced",
-                    "external_ui_download_url": "https://mirror.ghproxy.com/https://github.com/MetaCubeX/metacubexd/archive/gh-pages.zip",
-                    "external_ui_download_detour": "direct",
-                },
-                "cache_file": {"enabled": True, "store_fakeip": False},
-            },
-            "dns": get_dns_configs(
-                dns_direct=args.dns_direct,
-                dns_remote=args.dns_remote,
-                use_v6=args.use_v6,
-            ),
-            "inbounds": get_inbounds(
-                use_tun=args.tun,
-                use_mixed=args.mixed,
-                use_v6=args.use_v6,
-                listen_lan=args.lan,
-                docker=args.docker,
-            ),
-            "outbounds": get_outbounds(
-                rule_config=(rules[args.config]),
-                place_outbound=place_outbound,
-            ),
-            "route": {
-                "auto_detect_interface": True,  # 如果您是Linux、Windows 和 macOS用户，请将此条注释撤销，使 final 其生效，以免造成问题（上一行记得加,）
-                "final": GLOBAL_DETOUR,
-                "rule_set": get_rule_set(
-                    (rules[args.config]),
-                ),
-                "rules": get_route_rules(rule_config=(rules[args.config])),
-            },
-        }
         result_file.write(json.dumps(result_json, ensure_ascii=False))
