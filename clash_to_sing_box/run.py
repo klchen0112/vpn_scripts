@@ -9,7 +9,13 @@ import re
 parser = argparse.ArgumentParser(description="")
 
 parser.add_argument("--use_v6", help="whether to use ipv6", action="store_true")
-parser.add_argument("--config", help="which config use", type=str, default="simple")
+parser.add_argument(
+    "--config",
+    help="which config use",
+    type=str,
+    default="simple",
+    choices=["simple", "complex"],
+)
 parser.add_argument("--tun", help="use tun", action="store_true")
 parser.add_argument("--mixed", help="use mixed outbound", action="store_true")
 parser.add_argument("--lan", help="use lan mode", action="store_true")
@@ -344,292 +350,293 @@ def get_outbounds(rule_config, place_outbound):
 
 
 # 如果 outbound不为1那么就流量转自key
-rules_with_rule_set = {
-    "dns-catch": {
-        "type": "logical",
-        "model": "or",
-        "rules": [{"protocol": "dns"}, {"port": 53}],
-        "outbound": "dns",
+rules = {
+    "complex": {
+        "dns-catch": {
+            "type": "logical",
+            "model": "or",
+            "rules": [{"protocol": "dns"}, {"port": 53}],
+            "outbound": "dns",
+        },
+        "ip_is_private": {"ip_is_private": True, "outbound": "🎯 Direct"},
+        "clash_global": {"clash_mode": "Global", "outbound": "节点选择"},
+        "clash_direct": {"clash_mode": "Direct", "outbound": "🎯 Direct"},
+        "LOCAL_DOMAIN": {
+            "inline": ["localdomain"],
+            "outbound": "🎯 Direct",
+        },
+        "direct": {"type": "direct"},
+        "dns": {"type": "dns"},
+        "block": {"type": "block"},
+        GLOBAL_DETOUR: {
+            "type": "selector",
+            "outbounds": ["地区测速", "地区选择", "节点选择", "direct"],
+            "default": "地区测速",
+        },
+        "🎯 Direct": {
+            "type": "selector",
+            "outbounds": ["direct", GLOBAL_DETOUR],
+            "default": "direct",
+        },
+        "🛑 Block": {
+            "type": "selector",
+            "outbounds": ["block", "direct", GLOBAL_DETOUR],
+            "default": "block",
+        },
+        "󱤫 广告过滤": {
+            "type": "selector",
+            "geosite": ["category-ads-all"],
+            "outbounds": ["🛑 Block", "🎯 Direct"],
+            "default": "🛑 Block",
+        },
+        "🤖 AI": {
+            "type": "selector",
+            "geosite": ["openai"],
+            "outbounds": ["🇺🇸 美国", "🎯 Direct"],
+            "default": "🇺🇸 美国",
+        },
+        " Dev-CN": {
+            "type": "selector",
+            "geosite": ["category-dev-cn"],
+            "outbounds": ["🎯 Direct", GLOBAL_DETOUR],
+            "default": "🎯 Direct",
+        },
+        " Dev-Global": {
+            "type": "selector",
+            "geosite": ["category-dev", "category-container"],
+            "outbounds": [GLOBAL_DETOUR, "🎯 Direct"],
+            "default": GLOBAL_DETOUR,
+        },
+        "Schoolar CN": {
+            "type": "selector",
+            "geosite": ["category-scholar-cn", "category-education-cn"],
+            "outbounds": ["🎯 Direct", GLOBAL_DETOUR],
+            "default": "🎯 Direct",
+        },
+        "󰑴 Schoolar Global": {
+            "type": "selector",
+            "geosite": ["category-scholar-!cn"],
+            "outbounds": [
+                GLOBAL_DETOUR,
+                "🎯 Direct",
+            ],
+            "default": GLOBAL_DETOUR,
+        },
+        "󰊭 Google CN": {
+            "type": "selector",
+            "geosite": ["google@cn"],
+            "outbounds": [
+                "🎯 Direct",
+                GLOBAL_DETOUR,
+            ],
+            "default": "🎯 Direct",
+        },
+        "󰊭 Google": {
+            "type": "selector",
+            "geosite": ["google"],
+            # "geoip": ["google"],
+            "outbounds": [GLOBAL_DETOUR, "🎯 Direct"],
+            "default": GLOBAL_DETOUR,
+        },
+        "Social Media CN": {
+            "type": "selector",
+            "geosite": ["category-social-media-cn"],
+            "outbounds": ["🎯 Direct", GLOBAL_DETOUR],
+            "default": "🎯 Direct",
+        },
+        " Social Media Global": {
+            "type": "selector",
+            "geosite": ["category-social-media-!cn", "category-communication"],
+            # "geoip": ["telegram", "twitter", "facebook"],
+            "outbounds": [
+                GLOBAL_DETOUR,
+                "🎯 Direct",
+            ],
+            "default": GLOBAL_DETOUR,
+        },
+        "󰒚 Shopping": {
+            "type": "selector",
+            "geosite": ["amazon"],
+            "outbounds": [
+                GLOBAL_DETOUR,
+                "🎯 Direct",
+            ],
+            "default": GLOBAL_DETOUR,
+        },
+        "Ⓜ️ Microsoft CN": {
+            "type": "selector",
+            "geosite": ["microsoft@cn"],
+            "outbounds": [
+                "🎯 Direct",
+                GLOBAL_DETOUR,
+            ],
+            "default": "🎯 Direct",
+        },
+        "Ⓜ️ Microsoft": {
+            "type": "selector",
+            "geosite": ["microsoft"],
+            "outbounds": [
+                GLOBAL_DETOUR,
+                "🎯 Direct",
+            ],
+            "default": GLOBAL_DETOUR,
+        },
+        "🍎 Apple CN": {
+            "type": "selector",
+            "geosite": ["apple@cn"],
+            "outbounds": [
+                "🎯 Direct",
+                GLOBAL_DETOUR,
+            ],
+            "default": "🎯 Direct",
+        },
+        "🍎 Apple": {
+            "type": "selector",
+            "geosite": ["apple"],
+            "outbounds": [
+                GLOBAL_DETOUR,
+                "🎯 Direct",
+            ],
+            "default": GLOBAL_DETOUR,
+        },
+        "󱎓 Game CN": {
+            "type": "selector",
+            "geosite": ["category-games@cn", "category-game-accelerator-cn"],
+            "outbounds": [
+                "🎯 Direct",
+                GLOBAL_DETOUR,
+            ],
+            "default": "🎯 Direct",
+        },
+        "🎮 Game Global": {
+            "type": "selector",
+            "geosite": ["category-games"],
+            "outbounds": ["🇯🇵 日本", "🇭🇰 香港", GLOBAL_DETOUR, "🎯 Direct"],
+            "default": GLOBAL_DETOUR,
+        },
+        "哔哩哔哩": {
+            "type": "selector",
+            "geosite": ["bilibili"],
+            "outbounds": [
+                "🎯 Direct",
+                "🇹🇼 台湾",
+                "🇭🇰 香港",
+                GLOBAL_DETOUR,
+            ],
+            "default": "🎯 Direct",
+        },
+        "巴哈姆特": {
+            "type": "selector",
+            "geosite": ["bahamut", "bilibili@!cn"],
+            "outbounds": [
+                "🇹🇼 台湾",
+                "🇭🇰 香港",
+                GLOBAL_DETOUR,
+                "🎯 Direct",
+            ],
+            "default": "🇹🇼 台湾",
+        },
+        "国内流媒体": {
+            "type": "selector",
+            "geosite": ["category-media-cn"],
+            "outbounds": [
+                "🎯 Direct",
+                GLOBAL_DETOUR,
+            ],
+            "default": "🎯 Direct",
+        },
+        "󰝆 海外流媒体": {
+            "type": "selector",
+            # "geoip": ["netflix"],
+            "geosite": [
+                "category-media",
+                "category-entertainment",
+            ],
+            "outbounds": [
+                GLOBAL_DETOUR,
+                "🎯 Direct",
+            ],
+            "default": GLOBAL_DETOUR,
+        },
+        "🟨 Porn": {
+            "type": "selector",
+            "geosite": ["category-porn"],
+            "outbounds": [
+                GLOBAL_DETOUR,
+                "🎯 Direct",
+            ],
+            "default": GLOBAL_DETOUR,
+        },
+        # " Global": {
+        #     "type": "selector",
+        #     "geosite": ["geolocation-!cn"],
+        #     "outbounds": [
+        #         global_detour,
+        #         "🎯 Direct",
+        #     ],
+        #     "default": global_detour,
+        # },
+        "🇨🇳 CNIP": {
+            "type": "selector",
+            "geoip": ["cn"],
+            "geosite": ["geolocation-cn"],
+            "own": ["local_domain_list"],
+            "outbounds": [
+                "🎯 Direct",
+                GLOBAL_DETOUR,
+            ],
+            "default": "🎯 Direct",
+        },
     },
-    "ip_is_private": {"ip_is_private": True, "outbound": "🎯 Direct"},
-    "clash_global": {"clash_mode": "Global", "outbound": "节点选择"},
-    "clash_direct": {"clash_mode": "Direct", "outbound": "🎯 Direct"},
-    "LOCAL_DOMAIN": {
-        "inline": ["localdomain"],
-        "outbound": "🎯 Direct",
-    },
-    "direct": {"type": "direct"},
-    "dns": {"type": "dns"},
-    "block": {"type": "block"},
-    GLOBAL_DETOUR: {
-        "type": "selector",
-        "outbounds": ["地区测速", "地区选择", "节点选择", "direct"],
-        "default": "地区测速",
-    },
-    "🎯 Direct": {
-        "type": "selector",
-        "outbounds": ["direct", GLOBAL_DETOUR],
-        "default": "direct",
-    },
-    "🛑 Block": {
-        "type": "selector",
-        "outbounds": ["block", "direct", GLOBAL_DETOUR],
-        "default": "block",
-    },
-    "󱤫 广告过滤": {
-        "type": "selector",
-        "geosite": ["category-ads-all"],
-        "outbounds": ["🛑 Block", "🎯 Direct"],
-        "default": "🛑 Block",
-    },
-    "🤖 AI": {
-        "type": "selector",
-        "geosite": ["openai"],
-        "outbounds": ["🇺🇸 美国", "🎯 Direct"],
-        "default": "🇺🇸 美国",
-    },
-    " Dev-CN": {
-        "type": "selector",
-        "geosite": ["category-dev-cn"],
-        "outbounds": ["🎯 Direct", GLOBAL_DETOUR],
-        "default": "🎯 Direct",
-    },
-    " Dev-Global": {
-        "type": "selector",
-        "geosite": ["category-dev", "category-container"],
-        "outbounds": [GLOBAL_DETOUR, "🎯 Direct"],
-        "default": GLOBAL_DETOUR,
-    },
-    "Schoolar CN": {
-        "type": "selector",
-        "geosite": ["category-scholar-cn", "category-education-cn"],
-        "outbounds": ["🎯 Direct", GLOBAL_DETOUR],
-        "default": "🎯 Direct",
-    },
-    "󰑴 Schoolar Global": {
-        "type": "selector",
-        "geosite": ["category-scholar-!cn"],
-        "outbounds": [
-            GLOBAL_DETOUR,
-            "🎯 Direct",
-        ],
-        "default": GLOBAL_DETOUR,
-    },
-    "󰊭 Google CN": {
-        "type": "selector",
-        "geosite": ["google@cn"],
-        "outbounds": [
-            "🎯 Direct",
-            GLOBAL_DETOUR,
-        ],
-        "default": "🎯 Direct",
-    },
-    "󰊭 Google": {
-        "type": "selector",
-        "geosite": ["google"],
-        # "geoip": ["google"],
-        "outbounds": [GLOBAL_DETOUR, "🎯 Direct"],
-        "default": GLOBAL_DETOUR,
-    },
-    "Social Media CN": {
-        "type": "selector",
-        "geosite": ["category-social-media-cn"],
-        "outbounds": ["🎯 Direct", GLOBAL_DETOUR],
-        "default": "🎯 Direct",
-    },
-    " Social Media Global": {
-        "type": "selector",
-        "geosite": ["category-social-media-!cn", "category-communication"],
-        # "geoip": ["telegram", "twitter", "facebook"],
-        "outbounds": [
-            GLOBAL_DETOUR,
-            "🎯 Direct",
-        ],
-        "default": GLOBAL_DETOUR,
-    },
-    "󰒚 Shopping": {
-        "type": "selector",
-        "geosite": ["amazon"],
-        "outbounds": [
-            GLOBAL_DETOUR,
-            "🎯 Direct",
-        ],
-        "default": GLOBAL_DETOUR,
-    },
-    "Ⓜ️ Microsoft CN": {
-        "type": "selector",
-        "geosite": ["microsoft@cn"],
-        "outbounds": [
-            "🎯 Direct",
-            GLOBAL_DETOUR,
-        ],
-        "default": "🎯 Direct",
-    },
-    "Ⓜ️ Microsoft": {
-        "type": "selector",
-        "geosite": ["microsoft"],
-        "outbounds": [
-            GLOBAL_DETOUR,
-            "🎯 Direct",
-        ],
-        "default": GLOBAL_DETOUR,
-    },
-    "🍎 Apple CN": {
-        "type": "selector",
-        "geosite": ["apple@cn"],
-        "outbounds": [
-            "🎯 Direct",
-            GLOBAL_DETOUR,
-        ],
-        "default": "🎯 Direct",
-    },
-    "🍎 Apple": {
-        "type": "selector",
-        "geosite": ["apple"],
-        "outbounds": [
-            GLOBAL_DETOUR,
-            "🎯 Direct",
-        ],
-        "default": GLOBAL_DETOUR,
-    },
-    "󱎓 Game CN": {
-        "type": "selector",
-        "geosite": ["category-games@cn", "category-game-accelerator-cn"],
-        "outbounds": [
-            "🎯 Direct",
-            GLOBAL_DETOUR,
-        ],
-        "default": "🎯 Direct",
-    },
-    "🎮 Game Global": {
-        "type": "selector",
-        "geosite": ["category-games"],
-        "outbounds": ["🇯🇵 日本", "🇭🇰 香港", GLOBAL_DETOUR, "🎯 Direct"],
-        "default": GLOBAL_DETOUR,
-    },
-    "哔哩哔哩": {
-        "type": "selector",
-        "geosite": ["bilibili"],
-        "outbounds": [
-            "🎯 Direct",
-            "🇹🇼 台湾",
-            "🇭🇰 香港",
-            GLOBAL_DETOUR,
-        ],
-        "default": "🎯 Direct",
-    },
-    "巴哈姆特": {
-        "type": "selector",
-        "geosite": ["bahamut", "bilibili@!cn"],
-        "outbounds": [
-            "🇹🇼 台湾",
-            "🇭🇰 香港",
-            GLOBAL_DETOUR,
-            "🎯 Direct",
-        ],
-        "default": "🇹🇼 台湾",
-    },
-    "国内流媒体": {
-        "type": "selector",
-        "geosite": ["category-media-cn"],
-        "outbounds": [
-            "🎯 Direct",
-            GLOBAL_DETOUR,
-        ],
-        "default": "🎯 Direct",
-    },
-    "󰝆 海外流媒体": {
-        "type": "selector",
-        # "geoip": ["netflix"],
-        "geosite": [
-            "category-media",
-            "category-entertainment",
-        ],
-        "outbounds": [
-            GLOBAL_DETOUR,
-            "🎯 Direct",
-        ],
-        "default": GLOBAL_DETOUR,
-    },
-    "🟨 Porn": {
-        "type": "selector",
-        "geosite": ["category-porn"],
-        "outbounds": [
-            GLOBAL_DETOUR,
-            "🎯 Direct",
-        ],
-        "default": GLOBAL_DETOUR,
-    },
-    # " Global": {
-    #     "type": "selector",
-    #     "geosite": ["geolocation-!cn"],
-    #     "outbounds": [
-    #         global_detour,
-    #         "🎯 Direct",
-    #     ],
-    #     "default": global_detour,
-    # },
-    "🇨🇳 CNIP": {
-        "type": "selector",
-        "geoip": ["cn"],
-        "geosite": ["geolocation-cn"],
-        "own": ["local_domain_list"],
-        "outbounds": [
-            "🎯 Direct",
-            GLOBAL_DETOUR,
-        ],
-        "default": "🎯 Direct",
-    },
-}
-
-simple_version_rules = {
-    "dns-catch": {
-        "type": "logical",
-        "model": "or",
-        "rules": [{"protocol": "dns"}, {"port": 53}],
-        "outbound": "dns",
-    },
-    "ip_is_private": {"ip_is_private": True, "outbound": "🎯 Direct"},
-    "clash_global": {"clash_mode": "Global", "outbound": "节点选择"},
-    "clash_direct": {"clash_mode": "Direct", "outbound": "🎯 Direct"},
-    "LOCAL_DOMAIN": {
-        "inline": ["localdomain"],
-        "outbound": "🎯 Direct",
-    },
-    GLOBAL_DETOUR: {
-        "type": "selector",
-        "outbounds": ["地区测速", "地区选择", "节点选择", "direct"],
-        "default": "地区测速",
-    },
-    "direct": {"type": "direct"},
-    "dns": {"type": "dns"},
-    "block": {"type": "block"},
-    "🎯 Direct": {
-        "type": "selector",
-        "outbounds": ["direct", GLOBAL_DETOUR],
-        "default": "direct",
-    },
-    "󱤫 广告过滤": {
-        "type": "selector",
-        "geosite": ["category-ads-all"],
-        "outbounds": ["🛑 Block", "🎯 Direct"],
-        "default": "🛑 Block",
-    },
-    "🛑 Block": {
-        "type": "selector",
-        "outbounds": ["block", "direct", GLOBAL_DETOUR],
-        "default": "block",
-    },
-    "🇨🇳 CNIP": {
-        "type": "selector",
-        "geoip": ["cn"],
-        "geosite": ["geolocation-cn"],
-        "own": ["local_domain_list"],
-        "outbounds": [
-            "🎯 Direct",
-            GLOBAL_DETOUR,
-        ],
-        "default": "🎯 Direct",
+    "simple": {
+        "dns-catch": {
+            "type": "logical",
+            "model": "or",
+            "rules": [{"protocol": "dns"}, {"port": 53}],
+            "outbound": "dns",
+        },
+        "ip_is_private": {"ip_is_private": True, "outbound": "🎯 Direct"},
+        "clash_global": {"clash_mode": "Global", "outbound": "节点选择"},
+        "clash_direct": {"clash_mode": "Direct", "outbound": "🎯 Direct"},
+        "LOCAL_DOMAIN": {
+            "inline": ["localdomain"],
+            "outbound": "🎯 Direct",
+        },
+        GLOBAL_DETOUR: {
+            "type": "selector",
+            "outbounds": ["地区测速", "地区选择", "节点选择", "direct"],
+            "default": "地区测速",
+        },
+        "direct": {"type": "direct"},
+        "dns": {"type": "dns"},
+        "block": {"type": "block"},
+        "🎯 Direct": {
+            "type": "selector",
+            "outbounds": ["direct", GLOBAL_DETOUR],
+            "default": "direct",
+        },
+        "󱤫 广告过滤": {
+            "type": "selector",
+            "geosite": ["category-ads-all"],
+            "outbounds": ["🛑 Block", "🎯 Direct"],
+            "default": "🛑 Block",
+        },
+        "🛑 Block": {
+            "type": "selector",
+            "outbounds": ["block", "direct", GLOBAL_DETOUR],
+            "default": "block",
+        },
+        "🇨🇳 CNIP": {
+            "type": "selector",
+            "geoip": ["cn"],
+            "geosite": ["geolocation-cn"],
+            "own": ["local_domain_list"],
+            "outbounds": [
+                "🎯 Direct",
+                GLOBAL_DETOUR,
+            ],
+            "default": "🎯 Direct",
+        },
     },
 }
 
@@ -798,7 +805,8 @@ if __name__ == "__main__":
         "domain": local_domain_list,
     }
     with open("mixed.yaml", "r", encoding="utf-8") as file, open(
-        "result{}{}{}{}.json".format(
+        "result{}{}{}{}{}.json".format(
+            args.config,
             "_lan" if args.lan else "",
             "_v6" if args.use_v6 else "_v4",
             "_tun" if args.tun else "",
@@ -849,30 +857,16 @@ if __name__ == "__main__":
                 docker=args.docker,
             ),
             "outbounds": get_outbounds(
-                rule_config=(
-                    simple_version_rules
-                    if args.config == "simple"
-                    else rules_with_rule_set
-                ),
+                rule_config=(rules[args.config]),
                 place_outbound=place_outbound,
             ),
             "route": {
                 "auto_detect_interface": True,  # 如果您是Linux、Windows 和 macOS用户，请将此条注释撤销，使 final 其生效，以免造成问题（上一行记得加,）
                 "final": GLOBAL_DETOUR,
                 "rule_set": get_rule_set(
-                    (
-                        simple_version_rules
-                        if args.config == "simple"
-                        else rules_with_rule_set
-                    ),
+                    (rules[args.config]),
                 ),
-                "rules": get_route_rules(
-                    rule_config=(
-                        simple_version_rules
-                        if args.config == "simple"
-                        else rules_with_rule_set
-                    ),
-                ),
+                "rules": get_route_rules(rule_config=(rules[args.config])),
             },
         }
         result_file.write(json.dumps(result_json, ensure_ascii=False))
