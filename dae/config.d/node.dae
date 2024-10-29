@@ -1,0 +1,27 @@
+group {
+  proxy {
+    filter: name(keyword: JP,keyword: '日本', keyword: SG,keyword: '新加坡')
+    policy: min_moving_avg
+  }
+  ai-chat {
+    filter: name(keyword: US, keyword: '美国')
+    policy: min_moving_avg
+  }
+  steam {
+    # Filter nodes from the global node pool defined by the subscription and node section above.
+        filter: name(keyword: JP,keyword: '日本')
+        # Select the node with min moving average of latencies from the group for every connection.
+        policy: min_moving_avg
+
+        # Override tcp_check_url in global.
+        tcp_check_url: 'http://test.steampowered.com'
+        # Override tcp_check_http_method in global
+        #tcp_check_http_method: HEAD
+        # Override udp_check_dns in global
+        #udp_check_dns: 'dns.google:53,8.8.8.8,2001:4860:4860::8888'
+        # Override check_interval in global
+        #check_interval: 30s
+        # Override check_tolerance in global
+        #check_tolerance: 50ms
+  }
+}
