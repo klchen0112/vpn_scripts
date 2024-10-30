@@ -661,8 +661,13 @@ def get_inbounds(
                 "listen": "0.0.0.0" if listen_lan else "127.0.0.1",
                 "listen_port": 7890,
                 "sniff": True,
+                "sniff_override_destination": True,
                 "users": [],
                 "set_system_proxy": False if docker else True,
+                "tcp_fast_open": True,
+                "tcp_multi_path": True,
+                "udp_fragment": True,
+                "domain_strategy": "prefer_ipv4" if use_v6 else "ipv4_only",
             }
         )
     if use_tun and not docker:
