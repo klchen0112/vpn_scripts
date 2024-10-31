@@ -1,4 +1,5 @@
-log:
+
+g:
   level: warn
 
 
@@ -33,8 +34,8 @@ plugins:
     args:
       concurrent: 2
       upstreams:
-        - addr: tcp://8.8.8.8
-        - addr: tcp://1.1.1.1
+        - addr: "https://8.8.8.8/dns-query"
+        - addr: "https://1.1.1.1/dns-query"
 
   # 自定义hosts
   - tag: hosts
@@ -154,3 +155,4 @@ plugins:
     args:
       entry: main_sequence
       listen: :5335
+
