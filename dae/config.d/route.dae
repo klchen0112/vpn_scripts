@@ -2,9 +2,10 @@
 routing {
   # 进程规则
   pname(NetworkManager,tailscale,tailscaled) -> direct
-  pname(mosdns) && l4proto(udp) && dport(53) -> must_direct
+  pname(mosdns) && l4proto(udp) && dport(5335) -> must_direct
   pname(mosdns)  -> must_rules
   dip(224.0.0.0/3, 'ff00::/8') -> direct
+  dip(223.5.5.5,119.29.29.29) -> proxy
   dip(8.8.8.8,1.1.1.1) -> proxy
   domain(dlpublicsub.com) -> direct
 
@@ -14,11 +15,9 @@ routing {
   # 禁用 h3，因为它通常消耗很多 CPU 和内存资源
   l4proto(udp) && dport(443) -> block
   domain(geosite:category-ai-chat-!cn) -> proxy
-  
-  dip(geoip:private) -> direct
-  dip(geoip:cn) -> direct
-  domain(geosite:geolocation-cn) -> direct
-  domain(geosite:category-pt) -> direct
+  dip(geoip:telegram) -> proxy
+  dip(geoip:private,geoip:cn) -> direct
+  domain(geosite:geolocation-cn,geosite:category-pt) -> direct
   domain(geosite:category-games@cn,geosite:category-game-accelerator-cn) -> direct
   domain(geosite-category-games) -> steam
   fallback: proxy
