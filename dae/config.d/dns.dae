@@ -1,28 +1,12 @@
 # Use alidns for all DNS queries and fallback to googledns if pollution result detected.
 dns {
-  ipversion_prefer: 4
 
   upstream {
-    googledns: 'tcp+udp://dns.google:53'
-    alidns: 'udp://dns.alidns.com:53'
+    mosdns: 'udp+tcp://127.0.0.1:5335'
   }
   routing {
-    # According to the request of dns query, decide to use which DNS upstream.
-    # Match rules from top to bottom.
     request {
-      # fallback is also called default.
-      qname(geosite:category-ads-all) -> reject
-      fallback: alidns
-    }
-    # According to the response of dns query, decide to accept or re-lookup using another DNS upstream.
-    # Match rules from top to bottom.
-    response {
-      # Trusted upstream. Always accept its result.
-      upstream(googledns) -> accept
-      # Possibly polluted, re-lookup using googledns.
-      ip(geoip:private) && !qname(geosite:cn) -> googledns
-      # fallback is also called default.
-      fallback: accept
+      fallback: mosdns
     }
   }
 }

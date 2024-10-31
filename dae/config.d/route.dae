@@ -1,26 +1,24 @@
 # 更多的 Routing 样例见 https://github.com/daeuniverse/dae/blob/main/docs/en/configuration/routing.md
 routing {
   # 进程规则
-  pname(NetworkManager) -> direct
-  pname(tailscale) -> direct(must)
-  pname(tailscaled) -> direct(must)
+  pname(NetworkManager,tailscale,tailscaled) -> direct
+  pname(mosdns) && l4proto(udp) && dport(53) -> must_direct
   pname(mosdns)  -> must_rules
   dip(224.0.0.0/3, 'ff00::/8') -> direct
-  # 广告过滤
-  domain(geosite:category-ads) -> block
-  ### 以下为自定义规则
+  dip(8.8.8.8,1.1.1.1) -> proxy
+  domain(dlpublicsub.com) -> direct
 
   ### DSCP rule (match DSCP; is useful for BT bypass). See https://github.com/daeuniverse/dae/discussions/295
   dscp(0x4) -> direct
 
   # 禁用 h3，因为它通常消耗很多 CPU 和内存资源
   l4proto(udp) && dport(443) -> block
-  domain(geosite:category-ai-chat-!cn) -> direct
-
+  domain(geosite:category-ai-chat-!cn) -> proxy
+  
   dip(geoip:private) -> direct
   dip(geoip:cn) -> direct
   domain(geosite:geolocation-cn) -> direct
-  domain(geosite:category-dae) -> direct
+  domain(geosite:category-pt) -> direct
   domain(geosite:category-games@cn,geosite:category-game-accelerator-cn) -> direct
   domain(geosite-category-games) -> steam
   fallback: proxy
