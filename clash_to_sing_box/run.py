@@ -20,8 +20,9 @@ parser.add_argument("--tun", help="use tun inbound", action="store_true")
 parser.add_argument("--mixed", help="use mixed inbound", action="store_true")
 parser.add_argument("--lan", help="use lan mode", action="store_true")
 parser.add_argument("--docker", help="docker version", action="store_true")
+parser.add_argument("--dns_private", help="direct dns", type=str, default="dhcp://auto")
 parser.add_argument(
-    "--dns_direct", help="direct dns", type=str, default="https://doh.pub/dns-query"
+    "--dns_direct", help="direct dns", type=str, default="h3://dns.alidns.com/dns-query"
 )
 parser.add_argument(
     "--dns_remote",
@@ -695,7 +696,7 @@ def get_inbounds(
     return result
 
 
-def get_dns_configs(dns_direct, dns_remote, use_v6):
+def get_dns_configs(dns_private, dns_direct, dns_remote, use_v6):
     dns_config = {}
 
     # build servers
@@ -704,17 +705,17 @@ def get_dns_configs(dns_direct, dns_remote, use_v6):
             "tag": "dns-remote",
             "address": dns_remote,
             "detour": GLOBAL_DETOUR,
-            "address_resolver": "dns-system",
+            "address_resolver": "dns-private",
         },
         {
             "tag": "dns-direct",
             "address": dns_direct,
             "detour": "direct",
-            "address_resolver": "dns-system",
+            "address_resolver": "dns-private",
         },
         {
-            "tag": "dns-system",
-            "address": "dhcp://auto",
+            "tag": "dns-private",
+            "address": dns_private,
             "detour": "direct",
         },
         {"tag": "dns-block", "address": "rcode://success"},
@@ -751,7 +752,7 @@ def get_dns_configs(dns_direct, dns_remote, use_v6):
         },
         {
             "rule_set": ["inline-localdomain"],
-            "server": "dns-system",
+            "server": "dns-private",
         },
         {"rule_set": "geosite-geolocation-cn", "server": "dns-direct"},
         {
@@ -840,6 +841,7 @@ if __name__ == "__main__":
             "cache_file": {"enabled": True, "store_fakeip": False},
         },
         "dns": get_dns_configs(
+            dns_private=args.dns_private,
             dns_direct=args.dns_direct,
             dns_remote=args.dns_remote,
             use_v6=args.use_v6,
