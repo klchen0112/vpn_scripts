@@ -1,7 +1,8 @@
 group {
   proxy {
-    filter: name(keyword: JP,keyword: '日本', keyword: SG,keyword: '新加坡')
-    policy: min_moving_avg
+    filter: subtag(dualnet) && name(keyword: JP,keyword: '日本', keyword: SG,keyword: '新加坡') 
+    filter: subtag(yiyuan) [add_latency: 300ms]
+    policy: min_avg10
   }
   ai-chat {
     filter: name(keyword: US, keyword: '美国')
