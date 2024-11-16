@@ -25,10 +25,13 @@ plugins:
     args:
       concurrent: 2
       upstreams:
-        - addr: https://223.5.5.5/dns-query
+        - addr: https://dns.alidns.com/dns-query
           dial_addr: "223.5.5.5"
-          insecure_skip_verify: true
+          insecure_skip_verify: false
           enable_http3: true          #确实支持h3，已测试
+        - addr: "tls://dot.pub"
+          dial_addr: "119.29.29.29"
+          enable_pipeline: true
         - addr: "quic://223.5.5.5"  #QUIC牛逼
 
   # 转发至国外DNS, 并发查询
@@ -37,13 +40,14 @@ plugins:
     args:
       concurrent: 2
       upstreams:
-        - addr: "tls://8.8.8.8"    #不要改，只有tls和tcp支持pipeline
+        - addr: "tls://dns.quad9.net"    #不要改，只有tls和tcp支持pipeline
+          dial_addr: "9.9.9.9"
           enable_pipeline: true
-          insecure_skip_verify: true
-        # - addr: "https://1.1.1.1/dns-query"
-        - addr: "tls://1.1.1.1" #不要改，只有tls和tcp支持pipeline
+          insecure_skip_verify: false
+        - addr: "tls://dns.opendns.com" #不要改，只有tls和tcp支持pipeline
+          dial_addr: "208.67.222.222"
           enable_pipeline: true
-          insecure_skip_verify: true
+          insecure_skip_verify: false
 
   # 自定义hosts
   - tag: hosts
@@ -128,7 +132,7 @@ plugins:
       - matches: qtype 65
         exec: reject 3
 
-      - matches: $reject_list
+      - matches: qname $reject_list
         exec: reject
 
       - exec: prefer_ipv4
@@ -138,12 +142,12 @@ plugins:
       - matches: has_resp
         exec: accept
 
-      - matches: $direct_list
+      - matches: qname $direct_list
         exec: $forward_local
       - matches: has_resp
         exec: accept
 
-      - matches: $proxy_list
+      - matches: qname $proxy_list
         exec: $forward_remote
       - matches: has_resp
         exec: goto gfw-list
