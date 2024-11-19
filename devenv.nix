@@ -13,9 +13,9 @@
     enable = true;
     # version = "3.11.3";
 
-    uv = {
+    poetry = {
       enable = true;
-      sync.enable = true;
+      # sync.enable = true;
     };
   };
 

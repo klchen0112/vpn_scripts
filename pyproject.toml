@@ -1,10 +1,16 @@
-[project]
+[tool.poetry]
 name = "vpn-scripts"
 version = "0.1.0"
-description = "Add your description here"
+description = ""
+authors = ["klchen0112 <klchen0112@gmail.com>"]
 readme = "README.md"
-requires-python = ">=3.12"
-dependencies = [
-    "pyyaml>=6.0.2",
-    "requests>=2.32.3",
-]
+
+[tool.poetry.dependencies]
+python = ">=3.12"
+pyyaml = "^6.0.2"
+requests = "^2.32.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
