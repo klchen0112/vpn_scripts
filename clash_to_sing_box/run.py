@@ -301,9 +301,9 @@ def get_outbounds(rule_config, place_outbound):
             )
             outbounds.append(
                 {
-                    "tag": "地区测速",
+                    "tag": "自动选择",
                     "type": "urltest",
-                    "outbounds": place_list,
+                    "outbounds": all_bound_name,
                     "url": "https://www.gstatic.com/generate_204",
                     "interval": "1m",
                     "tolerance": 50,
