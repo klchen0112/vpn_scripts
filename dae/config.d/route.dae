@@ -1,9 +1,10 @@
 # 更多的 Routing 样例见 https://github.com/daeuniverse/dae/blob/main/docs/en/configuration/routing.md
 routing {
   # 进程规则
-  pname(NetworkManager,tailscale,tailscaled) -> direct
+  pname(NetworkManager) -> direct
+  pname(tailscale,tailscaled) -> must_direct
   pname(mosdns)  -> must_rules
-  dip(224.0.0.0/3, 'ff00::/8') -> direct
+  dip(224.0.0.0/3, 'ff00::/8',119.29.29.29/32,223.5.5.5/32) -> direct
 
   ### DSCP rule (match DSCP; is useful for BT bypass). See https://github.com/daeuniverse/dae/discussions/295
   dscp(0x4) -> direct

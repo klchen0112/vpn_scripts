@@ -1,21 +1,13 @@
 # Use alidns for China mainland domains and googledns for others.
 dns {
-  ipversion_prefer: 4
   upstream {
-    opendns: 'https://208.67.222.222/dns-query'
-    alidns: 'h3://223.5.5.5:443/dns-query'
+    mosdns: "udp://127.0.0.1:5335"
   }
   routing {
     # According to the request of dns query, decide to use which DNS upstream.
     # Match rules from top to bottom.
     request {
-      # Lookup China mainland domains using alidns, otherwise googledns.
-      qname(geosite:category-pt) -> opendns
-      qname(geosite:category-ads-all) -> reject
-      qname(geosite:cn) -> alidns
-      qname(suffix: dns.army) -> alidns
-      # fallback is also called default.
-      fallback: opendns
+      fallback: mosdns
     }
   }
 }
