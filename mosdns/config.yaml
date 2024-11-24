@@ -156,15 +156,16 @@ plugins:
 
 
   # 启动监听服务
+  - tag: udp_v6_server
+    type: udp_server
+    args:
+      entry: main_sequence
+      listen: '[::]:5335'
+
   - tag: udp_server
     type: udp_server
     args:
       entry: main_sequence
-      listen: :5335
+      listen: ':5335'
 
-  - tag: tcp_server
-    type: tcp_server
-    args:
-      entry: main_sequence
-      listen: :5335
 
