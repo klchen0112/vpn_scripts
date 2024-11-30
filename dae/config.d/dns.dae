@@ -14,7 +14,7 @@ dns {
       # 可信的 upstream。总是接受它的回复。
       upstream(puredns) -> accept
       # 非大陆的网站，向 'puredns' 重查。
-      ip(geoip:private) && !qname(geosite:cn,suffix:dualnode.pw,suffix:dlsdist.net) -> puredns
+      qname(geosite:geolocation-!cn) -> puredns
       # fallback 意为 default。
       fallback: accept
     }
