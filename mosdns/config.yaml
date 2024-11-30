@@ -23,7 +23,7 @@ plugins:
   - tag: forward_local
     type: forward
     args:
-      concurrent: 2
+      concurrent: 3
       upstreams:
         - addr: https://dns.alidns.com/dns-query
           dial_addr: "223.5.5.5"
@@ -32,7 +32,9 @@ plugins:
         - addr: "tls://dot.pub"
           dial_addr: "119.29.29.29"
           enable_pipeline: true
-        - addr: "quic://223.5.5.5"  #QUIC牛逼
+        - addr: "tls://dns.alidns.com"  #QUIC牛逼
+          enable_pipeline: true
+          dial_addr: "223.5.5.5"
 
   # 转发至国外DNS, 并发查询
   - tag: forward_remote
@@ -43,11 +45,9 @@ plugins:
         - addr: "tls://dns.quad9.net"    #不要改，只有tls和tcp支持pipeline
           dial_addr: "9.9.9.9"
           enable_pipeline: true
-          insecure_skip_verify: false
         - addr: "tls://dns.opendns.com" #不要改，只有tls和tcp支持pipeline
           dial_addr: "208.67.222.222"
           enable_pipeline: true
-          insecure_skip_verify: false
 
   # 自定义hosts
   - tag: hosts
@@ -90,8 +90,8 @@ plugins:
     type: sequence
     args:
       - exec: $forward_local
-      - matches: resp_ip $local_ip
-        exec: accept
+      #- matches: resp_ip $local_ip
+      #  exec: accept
       - exec: drop_resp
 
   # fallback的secondary服务器, 返回非国内ip则添加至ipset, 返回国内ip只接受不会添加ipset
@@ -99,8 +99,8 @@ plugins:
     type: sequence
     args:
       - exec: $forward_remote
-      - matches: "!resp_ip $local_ip"
-        exec: ipset gfwlist,inet,32
+      #- matches: "!resp_ip $local_ip"
+      #  exec: ipset gfwlist,inet,32
       - exec: accept
 
   # fallback sequence
@@ -117,8 +117,8 @@ plugins:
     type: sequence
     args:
       - exec: ttl 300-3600
-      - matches: "!resp_ip $local_ip"
-        exec: ipset gfwlist,inet,24
+      #- matches: "!resp_ip $local_ip"
+      #  exec: ipset gfwlist,inet,24
       - exec: accept
 
   # 主运行序列

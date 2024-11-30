@@ -1,1 +1,2 @@
-b1.dlpublicsub.com
+domain:b1.dlpublicsub.com
+domain:dualnode.pw
