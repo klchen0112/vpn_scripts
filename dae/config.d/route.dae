@@ -3,9 +3,10 @@ routing {
   # 进程规则
   pname(NetworkManager) -> direct
   pname(tailscale,tailscaled) -> must_direct
-  pname(mosdns)  -> must_rules
-  dip(224.0.0.0/3, 'ff00::/8',119.29.29.29/32,223.5.5.5/32) -> direct
-
+  pname(mosdns) && dip(223.5.5.5/32,119.29.29.29/32) -> must_direct
+  pname(mosdns) && dip(9.9.9.9/32,208.67.222.222/32) -> proxy
+  dip(224.0.0.0/3, 'ff00::/8') -> direct
+  l4proto(udp) && dport(443) -> block
   ### DSCP rule (match DSCP; is useful for BT bypass). See https://github.com/daeuniverse/dae/discussions/295
   dscp(0x4) -> direct
 

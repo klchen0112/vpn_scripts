@@ -10,6 +10,7 @@ global {
   log_level: warn
   allow_insecure: false
   auto_config_kernel_parameter: true
+  mptcp: true
 }
 
 
