@@ -2,19 +2,23 @@
 dns {
   ipversion_prefer: 4
   upstream {
-      alidns: 'h3://dns.alidns.com:443'
-      puredns: 'https://puredns.org/dns-query'
+      localh3: 'h3://dns.alidns.com:443'
+      localhttps: 'https://doh.pub/dns-query'
+      remote: 'https://dns.opendns.com/dns-query'
   }
   routing {
     request {
       qname(geosite:category-ads-all) -> reject
-      fallback: alidns
+      qname(geosite:geolocation-cn,suffix:dualnode.pw,suffix:dlsdist.net) -> localh3
+      fallback: remote
     }
     response {
       # 可信的 upstream。总是接受它的回复。
-      upstream(puredns) -> accept
-      # 非大陆的网站，向 'puredns' 重查。
-      qname(geosite:geolocation-!cn) -> puredns
+      upstream(remote)  -> accept
+      upstream(localhttps)  -> accept
+      # 非大陆的网站，向 'remote' 重查。
+      ip(geoip:private) && qname(suffix:dualnode.pw,suffix:dlsdist.net) -> localhttps
+      ip(geoip:private) && !qname(geosite:geolocation-cn,suffix:klchen.dns.army) -> remote
       # fallback 意为 default。
       fallback: accept
     }
