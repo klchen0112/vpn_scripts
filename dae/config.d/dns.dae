@@ -1,13 +1,22 @@
-# Use alidns for China mainland domains and googledns for others.
+
 dns {
+  ipversion_prefer: 4
   upstream {
-    mosdns: "udp://127.0.0.1:5335"
+      alidns: 'h3://dns.alidns.com:443'
+      puredns: 'https://puredns.org/dns-query'
   }
   routing {
-    # According to the request of dns query, decide to use which DNS upstream.
-    # Match rules from top to bottom.
     request {
-      fallback: mosdns
+      qname(geosite:category-ads-all) -> reject
+      fallback: alidns
+    }
+    response {
+      # 可信的 upstream。总是接受它的回复。
+      upstream(puredns) -> accept
+      # 非大陆的网站，向 'puredns' 重查。
+      ip(geoip:private) && !qname(geosite:cn,suffix:dualnode.pw,suffix:dlsdist.net) -> puredns
+      # fallback 意为 default。
+      fallback: accept
     }
   }
 }
