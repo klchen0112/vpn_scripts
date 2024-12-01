@@ -10,7 +10,7 @@ dns {
   }
   upstream {
     localdns: 'h3://dns.alidns.com:443'
-    overseadns: 'h3://dns.google/dns-query'
+    overseadns: 'https://dns.opendns.com/dns-query'
   }
   routing {
     request {
