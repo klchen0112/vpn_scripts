@@ -3,20 +3,21 @@ routing {
   # 进程规则
   pname(NetworkManager) -> direct
   pname(tailscale,tailscaled) -> must_direct
-  dip(223.5.5.5/32,223.6.6.6/32,119.29.29.29/32) -> direct
-  dip(9.9.9.9/32,208.67.222.222/32,208.67.220.220/32) -> proxy
-  dip(224.0.0.0/3, 'ff00::/8') -> direct
-  l4proto(udp) && dport(443) -> block
-
-  # 广告过滤
-  domain(geosite:category-ads-all) -> block
   ### DSCP rule (match DSCP; is useful for BT bypass). See https://github.com/daeuniverse/dae/discussions/295
   dscp(0x4) -> direct
 
-  domain(geosite:category-ai-chat-!cn,geosite:category-scholar-!cn) -> ai-chat
+  dip(224.0.0.0/3, 'ff00::/8') -> direct
+  domain(geosite:tld-cn, geosite:private, geosite:apple-cn, geosite:google-cn, geosite:category-games@cn) -> direct
+  # l4proto(udp) && dport(443) -> block
 
-  domain(geosite:geolocation-cn,geosite:category-pt,geosite:category-games@cn,geosite:category-game-accelerator-cn) -> direct
-  domain(geosite-category-games) -> steam
+
+
+  domain(geosite:bing@cn) -> direct
+  domain(geosite:bing) && !domain(geosite:bing@cn) -> ai-chat
+  domain(geosite:category-ai-chat-!cn,geosite:category-scholar-!cn) -> ai-chat
+  domain(geosite:bing) -> ai-chat
+
+  domain(geosite:gfw) -> proxy
 
   dip(geoip:private,geoip:cn) -> direct
   fallback: proxy
