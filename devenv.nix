@@ -13,7 +13,7 @@
     enable = true;
     # version = "3.11.3";
 
-    poetry = {
+    uv = {
       enable = true;
       # sync.enable = true;
     };
@@ -21,9 +21,11 @@
 
   # https://devenv.sh/pre-commit-hooks/
   pre-commit.hooks = {
+    # remove un unsed imports
     shellcheck.enable = true;
     # format Python code
-    black.enable = true;
+    ruff.enable = true;
+    ruff-format.enable = true;
   };
   # https://devenv.sh/processes/
   # processes.ping.exec = "ping example.com";
