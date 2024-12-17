@@ -3,7 +3,6 @@ import yaml
 import json
 import copy
 import argparse
-import requests
 import re
 
 parser = argparse.ArgumentParser(description="")
@@ -108,7 +107,9 @@ def process_proxy(proxy):
         result["uuid"] = proxy["uuid"]
         result["alter_id"] = proxy["alterId"]
         result["security"] = proxy["cipher"]
-        if proxy["network"] == "ws":
+        if "netowork" not in proxy:
+            pass
+        elif proxy["network"] == "ws":
             result["transport"] = {
                 "type": "ws",
                 "path": proxy["ws-path"],
@@ -132,16 +133,24 @@ def process_proxy(proxy):
                 "insecure": False,
                 "server_name": None,
             },
-            "up_mbps": 100,
-            "down_mbps": 100,
+            # "up_mbps": 100,
+            # "down_mbps": 100,
         }
         hysteria2_server_base["tag"] = proxy["name"]
         hysteria2_server_base["server"] = proxy["server"]
         hysteria2_server_base["server_port"] = int(proxy["port"])
         hysteria2_server_base["password"] = proxy["password"]
-        hysteria2_server_base["up_mbps"] = proxy["up"]
-        hysteria2_server_base["down_mbps"] = proxy["down"]
+        if "sni" in proxy:
+            hysteria2_server_base["tls"]["server_name"] = proxy["sni"]
+        if "skip-cert-verify" in proxy:
+            hysteria2_server_base["tls"]["insecure"] = proxy["skip-cert-verify"]
+        if "up" in proxy:
+            hysteria2_server_base["up_mbps"] = proxy["up"]
+        if "down" in proxy:
+            hysteria2_server_base["down_mbps"] = proxy["down"]
         return hysteria2_server_base
+    elif proxy["type"] == "vless":
+        return None
     else:
         raise ValueError("Wrong proxy type")
 
@@ -173,7 +182,6 @@ PLACE_PATTERNS = {
     "🇨🇱 智利": r"🇨🇱|智利",
     "🇨🇴 哥伦比亚": r"🇨🇴|哥伦比亚",
     "🇳🇬 尼日利亚": r"🇳🇬|尼日利亚",
-    "🇨🇦 加拿大": r"🇨🇦|加拿大",
     "🇸🇪 瑞典": r"🇸🇪|瑞典",
     "🇨🇭 瑞士": r"🇨🇭|瑞士",
 }
@@ -371,8 +379,8 @@ rules = {
         "block": {"type": "block"},
         GLOBAL_DETOUR: {
             "type": "selector",
-            "outbounds": ["地区测速", "地区选择", "节点选择", "direct"],
-            "default": "地区测速",
+            "outbounds": ["自动选择", "地区选择", "节点选择", "direct"],
+            "default": "自动选择",
         },
         "🎯 Direct": {
             "type": "selector",
@@ -605,8 +613,8 @@ rules = {
         },
         GLOBAL_DETOUR: {
             "type": "selector",
-            "outbounds": ["地区测速", "地区选择", "节点选择", "direct"],
-            "default": "地区测速",
+            "outbounds": ["自动选择", "地区选择", "节点选择", "direct"],
+            "default": "自动选择",
         },
         "direct": {"type": "direct"},
         "dns": {"type": "dns"},
@@ -774,7 +782,6 @@ def get_dns_configs(dns_private, dns_direct, dns_remote, use_v6):
 
 
 if __name__ == "__main__":
-
     black_list = ["机场", "订阅", "流量", "套餐", "重置", "电报群", "官网", "去除"]
     proxies = []
     with open("airport.txt", "r") as fp:
@@ -815,13 +822,15 @@ if __name__ == "__main__":
 
     for proxy in proxies:
         flag = True
+        print(proxy)
         for place_name, place_pattern in PLACE_PATTERNS.items():
             if re.search(place_pattern, proxy["name"]):
+                ret = process_proxy(proxy=proxy)
+                if ret is None:
+                    continue
                 if place_name not in place_outbound:
                     place_outbound[place_name] = []
-                place_outbound[place_name].append(
-                    copy.deepcopy(process_proxy(proxy=proxy))
-                )
+                place_outbound[place_name].append(ret)
                 flag = False
                 break
         if flag:
