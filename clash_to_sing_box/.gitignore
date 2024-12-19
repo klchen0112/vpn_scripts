@@ -3,3 +3,6 @@ mixed.yaml
 airport.txt
 ui/
 cache.db
+*.srs
+*.yaml
+sing-box
