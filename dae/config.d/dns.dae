@@ -7,16 +7,18 @@ dns {
     dns.opendns.com: 604800
     dns.google: 604800
     one.one.one.one: 604800
+    dualnode.pw: 604800
   }
   upstream {
-    localdns: 'h3://dns.alidns.com:443'
-    overseadns: 'https://dns.opendns.com/dns-query'
+    localdns: 'h3://dns.alidns.com:443/dns-query'
+    overseadns: 'https://208.67.220.220/dns-query'
   }
   routing {
     request {
       qname(suffix:dualnode.pw,suffix:dlsdist.net) -> localdns
       qname(geosite:private, geosite:apple-cn, geosite:google-cn, geosite:category-games@cn) -> localdns
       qname(geosite:geolocation-!cn) && !qname(geosite:bing@cn) -> overseadns
+      qname(geosite:bing@cn, geosite:cn) -> localdns
       fallback: overseadns
     }
     response {
