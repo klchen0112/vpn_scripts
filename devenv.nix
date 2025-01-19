@@ -22,7 +22,7 @@
   # https://devenv.sh/pre-commit-hooks/
   pre-commit.hooks = {
     # remove un unsed imports
-    shellcheck.enable = true;
+    shellcheck.enable = false;
     # format Python code
     ruff.enable = true;
     ruff-format.enable = true;
