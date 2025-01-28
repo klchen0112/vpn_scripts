@@ -676,7 +676,7 @@ def get_inbounds(
                 "sniff": True,
                 "sniff_override_destination": True,
                 "users": [],
-                "set_system_proxy": False if docker else True,
+                "set_system_proxy": False if docker or use_tun else True,
                 "tcp_fast_open": True,
                 "tcp_multi_path": True,
                 "udp_fragment": True,
@@ -792,7 +792,7 @@ def get_dns_configs(dns_private, dns_direct, dns_remote, use_v6):
     dns_config["fakeip"] = {
         "enabled": True,
         "inet4_range": "198.18.0.0/15",
-        **({"inet6_range": ["fc00::/18"]} if use_v6 else {}),
+        **({"inet6_range": "fc00::/18"} if use_v6 else {}),
         "exclude_rule": {"rule_set": ["fakeip-filter", "geoip-private"]},
     }
     return dns_config
@@ -807,7 +807,7 @@ if __name__ == "__main__":
         headers = {"User-Agent": "clash-verge/v1.3.8"}
         result_dict = {"proxies": []}
         for line in fp.readlines():
-            url, agent = line.strip()
+            url, agent = line.strip().split(" ")
             headers["User-Agent"] = agent
             if len(url) == 0:
                 break
@@ -854,7 +854,6 @@ if __name__ == "__main__":
                                 place_outbound[place_name].append(ret)
                                 flag = False
                                 break
-        #         # 现在，变量'data'包local_domain_list含了从HTTPS响应中解析出的数据
 
     local_domain_list = []
     with open("localdomain.txt", "r") as local_domain_file:
