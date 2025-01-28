@@ -29,6 +29,7 @@ parser.add_argument(
     type=str,
     default="https://cloudflare-dns.com/dns-query",
 )
+parser.add_argument("--platform", type=str, choices=["linux", "darwin", "windows"])
 args = parser.parse_args()
 
 
@@ -235,7 +236,16 @@ def get_rule_set(rule_config):
                 rule_sets.append(get_rule_set_url(rule_type="inline", name=name))
     if not find:
         rule_sets.append(get_rule_set_url(rule_type="geosite", name="geolocation-!cn"))
-
+    rule_sets.append(
+        {
+            "tag": "fakeip-filter",
+            "type": "remote",
+            "format": "binary",
+            "path": "./fakeip-filter.srs",
+            "url": "https://github.com/DustinWin/ruleset_geodata/releases/download/sing-box-ruleset/fakeip-filter-lite.srs",
+            "download_detour": "节点选择",
+        }
+    )
     return rule_sets
 
 
@@ -361,12 +371,6 @@ def get_outbounds(rule_config, place_outbound):
 # 如果 outbound不为1那么就流量转自key
 rules = {
     "complex": {
-        "dns-catch": {
-            "type": "logical",
-            "model": "or",
-            "rules": [{"protocol": "dns"}, {"port": 53}],
-            "outbound": "dns",
-        },
         "ip_is_private": {"ip_is_private": True, "outbound": "🎯 Direct"},
         "clash_global": {"clash_mode": "Global", "outbound": "节点选择"},
         "clash_direct": {"clash_mode": "Direct", "outbound": "🎯 Direct"},
@@ -684,8 +688,8 @@ def get_inbounds(
             {
                 "type": "tun",
                 "tag": "tun",
-                "inet4_address": "172.19.0.1/30",
-                **({"inet6_address": "fdfd:9527::1/32"} if use_v6 else {}),
+                "inet4_address": ["172.19.0.1/30"],
+                **({"inet6_address": ["fdfd:9527::1/32"]} if use_v6 else {}),
                 "mtu": 9000,
                 "auto_route": True,
                 "strict_route": True,
@@ -694,7 +698,7 @@ def get_inbounds(
                 "stack": "system",
                 "platform": {
                     "http_proxy": {
-                        "enabled": True,
+                        "enabled": False,
                         "server": "127.0.0.1",
                         "server_port": 7890,
                     }
@@ -727,6 +731,7 @@ def get_dns_configs(dns_private, dns_direct, dns_remote, use_v6):
             "detour": "direct",
         },
         {"tag": "dns-block", "address": "rcode://success"},
+        {"tag": "dns-fakeip", "address": "fakeip"},
     ]
 
     # build rules
@@ -757,56 +762,99 @@ def get_dns_configs(dns_private, dns_direct, dns_remote, use_v6):
             ],
             "server": "dns-block",
             "disable_cache": True,
+            "rewrite_ttl": 0,
         },
         {
             "rule_set": ["inline-localdomain"],
             "server": "dns-private",
         },
-        {"rule_set": "geosite-geolocation-cn", "server": "dns-direct"},
         {
-            "type": "logical",
-            "mode": "and",
-            "rules": [
-                {"rule_set": "geosite-geolocation-!cn", "invert": True},
-                {"rule_set": "geoip-cn"},
+            "rule_set": "geosite-geolocation-cn",
+            "query_type": ["A", "AAAA"],
+            "server": "dns-direct",
+        },
+        {
+            "fallback_rules": [
+                {"rule_set": ["geoip-cn"], "server": "dns-direct"},
+                {"match_all": True, "server": "dns-fakeip", "rewrite_ttl": 1},
             ],
-            "server": "google",
-            "client_subnet": "114.114.114.114/24",
+            "server": "dns-remote",
+            "allow_fallthrough": True,
         },
     ]
 
-    dns_config["final"] = "dns-remote"
+    dns_config["final"] = "dns-direct"
     dns_config["independent_cache"] = True
+    dns_config["lazy_cache"] = True
+    dns_config["mapping_override"] = True
+    dns_config["reverse_mapping"] = True
     dns_config["strategy"] = "prefer_ipv4" if use_v6 else "ipv4_only"
+    dns_config["fakeip"] = {
+        "enabled": True,
+        "inet4_range": "198.18.0.0/15",
+        **({"inet6_range": ["fc00::/18"]} if use_v6 else {}),
+        "exclude_rule": {"rule_set": ["fakeip-filter", "geoip-private"]},
+    }
     return dns_config
 
 
 if __name__ == "__main__":
     black_list = ["机场", "订阅", "流量", "套餐", "重置", "电报群", "官网", "去除"]
     proxies = []
+    place_outbound = dict()
+
     with open("airport.txt", "r") as fp:
         headers = {"User-Agent": "clash-verge/v1.3.8"}
         result_dict = {"proxies": []}
         for line in fp.readlines():
-            url = line.strip()
+            url, agent = line.strip()
+            headers["User-Agent"] = agent
             if len(url) == 0:
                 break
             # 发送HTTPS请求并获取响应
             response = requests.get(
                 url=url, headers=headers
             )  # 用你的API端点替换这里的URL
-
-            # 使用PyYAML解析响应的内容
-            data = yaml.safe_load(response.text)
-            for proxy in data["proxies"]:
-                flag = True
-                for bn in black_list:
-                    if bn in proxy["name"]:
-                        flag = False
-                        break
-                if flag:
-                    proxies.append(proxy)
-    #         # 现在，变量'data'包local_domain_list含了从HTTPS响应中解析出的数据
+            if agent == "sing-box":
+                data = json.loads(response.text)
+                outbounds = data["outbounds"]
+                for outbound in outbounds:
+                    if outbound["type"] not in ["selector", "dns", "direct", "block"]:
+                        continue
+                    flag = True
+                    for bn in black_list:
+                        if bn in outbound["tag"]:
+                            flag = False
+                            break
+                    if flag:
+                        for place_name, place_pattern in PLACE_PATTERNS.items():
+                            if re.search(place_pattern, outbound["tag"]):
+                                if place_name not in place_outbound:
+                                    place_outbound[place_name] = []
+                                place_outbound[place_name].append(outbound)
+                                flag = False
+                                break
+            elif agent == "clash":
+                # 使用PyYAML解析响应的内容
+                data = yaml.safe_load(response.text)
+                for proxy in data["proxies"]:
+                    flag = True
+                    for bn in black_list:
+                        if bn in proxy["name"]:
+                            flag = False
+                            break
+                    if flag:
+                        for place_name, place_pattern in PLACE_PATTERNS.items():
+                            if re.search(place_pattern, proxy["name"]):
+                                ret = process_proxy(proxy=proxy)
+                                if ret is None:
+                                    continue
+                                if place_name not in place_outbound:
+                                    place_outbound[place_name] = []
+                                place_outbound[place_name].append(ret)
+                                flag = False
+                                break
+        #         # 现在，变量'data'包local_domain_list含了从HTTPS响应中解析出的数据
 
     local_domain_list = []
     with open("localdomain.txt", "r") as local_domain_file:
@@ -815,26 +863,8 @@ if __name__ == "__main__":
             local_domain_list.append(domain.strip())
     local_RULES["inline-localdomain"] = {
         "domain_suffix": local_domain_list,
-        "domain": local_domain_list,
     }
 
-    place_outbound = dict()
-
-    for proxy in proxies:
-        flag = True
-        print(proxy)
-        for place_name, place_pattern in PLACE_PATTERNS.items():
-            if re.search(place_pattern, proxy["name"]):
-                ret = process_proxy(proxy=proxy)
-                if ret is None:
-                    continue
-                if place_name not in place_outbound:
-                    place_outbound[place_name] = []
-                place_outbound[place_name].append(ret)
-                flag = False
-                break
-        if flag:
-            print(proxy)
     result_json = {
         "log": LOG_SETTINGS,
         "experimental": {
@@ -847,7 +877,7 @@ if __name__ == "__main__":
                 "external_ui_download_url": "https://mirror.ghproxy.com/https://github.com/MetaCubeX/metacubexd/archive/gh-pages.zip",
                 "external_ui_download_detour": "direct",
             },
-            "cache_file": {"enabled": True, "store_fakeip": False},
+            "cache_file": {"enabled": True, "store_fakeip": True},
         },
         "dns": get_dns_configs(
             dns_private=args.dns_private,
