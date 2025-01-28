@@ -1,2 +1,0 @@
-domain:b1.dlpublicsub.com
-domain:dualnode.pw
