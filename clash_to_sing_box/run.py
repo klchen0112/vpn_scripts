@@ -40,7 +40,7 @@ URL_TEST_BASE = {
     "type": "urltest",
     "tag": "",
     "outbounds": [],
-    "url": "https://www.gstatic.com/generate_204",
+    "url": "https://youtube.com/generate_204",
     "interval": "3m",
     "tolerance": 50,
 }
@@ -112,6 +112,7 @@ def process_proxy(proxy):
         result["alter_id"] = proxy["alterId"]
         result["security"] = proxy["cipher"]
         if "netowork" not in proxy:
+            print(proxy)
             pass
         elif proxy["network"] == "ws":
             result["transport"] = {
@@ -251,7 +252,7 @@ def get_route_rules(rule_config, platform: str, use_fakeip):
     route_rules.append(
         {
             "domain_suffix": ["dns.google", "one.one.one.one", "dns.cloudflare.com"],
-            "outbound": "dns",
+            "outbound": "✈️ Proxy",
         }
     )
     # route_rules.append({"protocol": ["stun", "quic"], "outbound": "🛑 Block"})
@@ -666,9 +667,10 @@ def get_inbounds(
     listen_lan: bool,
     docker: bool,
     use_fakeip: bool,
+    platform: str,
 ):
     result = []
-    if use_fakeip:
+    if use_fakeip and platform == "openwrt":
         result.append(
             {"type": "direct", "tag": "dns-in", "listen": "::", "listen_port": 6666}
         )
@@ -679,7 +681,7 @@ def get_inbounds(
                 "tag": "mixed",
                 "listen": "0.0.0.0" if listen_lan else "127.0.0.1",
                 "listen_port": 7890,
-                "sniff": False if use_fakeip else True,
+                "sniff": True,
                 "sniff_override_destination": False,
                 "users": [],
                 "set_system_proxy": False if docker or use_tun else True,
@@ -694,11 +696,11 @@ def get_inbounds(
             {
                 "type": "tun",
                 "tag": "tun",
-                "address": ["28.0.0.0/8"] + (["f2b0::/18"] if use_v6 else []),
+                "address": ["172.16.0.0/30"] + (["fd00::0/126"] if use_v6 else []),
                 "mtu": 9000,
                 "auto_route": True,
                 "strict_route": True,
-                "sniff": False if use_fakeip else True,
+                "sniff": True,
                 "endpoint_independent_nat": False,
                 "stack": "system",
                 "platform": {
@@ -724,66 +726,77 @@ def get_dns_configs(
             "tag": "dns-remote",
             "address": dns_remote,
             "detour": GLOBAL_DETOUR if platform != "openwrt" else "direct",
-            "address_resolver": "dns-private",
+            "address_resolver": "dns-resolver",
         },
         {
             "tag": "dns-direct",
             "address": dns_direct,
             "detour": "direct",
-            "address_resolver": "dns-private",
+            "address_resolver": "dns-resolver",
+        },
+        {
+            "tag": "dns-resolver",
+            "address": "223.5.5.5",
+            "detour": "direct",
         },
         {
             "tag": "dns-private",
             "address": dns_private,
             "detour": "direct",
         },
-        {"tag": "dns-block", "address": "rcode://success"},
+        {"tag": "dns-success", "address": "rcode://success"},
+        {"tag": "dns-refused", "address": "rcode://refused"},
     ]
     if use_fakeip:
         dns_config["servers"].append({"tag": "dns-fakeip", "address": "fakeip"})
 
     # build rules
     if use_fakeip:
-        dns_config["rules"] = [
-            {"outbound": "any", "server": "dns-private", "disable_cache": True},
-            {
-                "inbound": "dns-in",
-                "server": "dns-fakeip",
-                "disable_cache": False,
-                "rewrite_ttl": 1,
-            },
-            {
-                "rule_set": "geosite-geolocation-cn",
-                "query_type": ["A", "AAAA"],
-                "server": "dns-direct",
-            },
-            {
-                "type": "logical",
-                "mode": "and",
-                "rules": [
+        dns_config["rules"] = (
+            [
+                {"outbound": "any", "server": "dns-resolver", "disable_cache": True},
+            ]
+            + (
+                [
                     {
                         "rule_set": "geosite-geolocation-!cn",
+                        "query_type": ["A", "AAAA"],
+                        "server": "dns-fakeip",
                     },
-                    {"rule_set": "geoip-cn"},
-                ],
-                "server": "dns-remote",
-                "client_subnet": "112.12.250.166/32",
-            },
-            {
-                "query_type": ["A", "AAAA"],
-                "server": "dns-fakeip",
-            },
-        ]
-        dns_config["final"] = "dns-remote"
+                ]
+                if args.platform != "openwrt"
+                else [
+                    {
+                        "inbound": "dns-in",
+                        "server": "dns-fakeip",
+                        "disable_cache": False,
+                        "rewrite_ttl": 1,
+                    },
+                ]
+            )
+            + [
+                {
+                    "rule_set": "geosite-geolocation-!cn",
+                    "query_type": [
+                        "CNAME",
+                    ],
+                    "server": "dns-remote",
+                },
+                {
+                    "query_type": [
+                        "CNAME",
+                        "A",
+                        "AAAA",
+                    ],
+                    "server": "dns-refused",
+                    "disable_cache": True,
+                },
+            ]
+        )
+        dns_config["final"] = "dns-direct"
     else:
         dns_config["rules"] = [
             {"outbound": "any", "server": "dns-private", "disable_cache": True},
-            {
-                "inbound": "dns-in",
-                "server": "dns-fakeip",
-                "disable_cache": False,
-                "rewrite_ttl": 1,
-            },
             {"clash_mode": "Direct", "server": "dns-direct"},
             {
                 "clash_mode": "Global",
@@ -807,7 +820,7 @@ def get_dns_configs(
                     "crashlytics.com",
                     "google-analytics.com",
                 ],
-                "server": "dns-block",
+                "server": "dns-success",
                 "disable_cache": True,
                 "rewrite_ttl": 0,
             },
@@ -821,14 +834,15 @@ def get_dns_configs(
                 "server": "dns-direct",
             },
         ]
-        dns_config["final"] = "dns-direct"
+        dns_config["final"] = "dns-remote"
     dns_config["independent_cache"] = True
     dns_config["strategy"] = "prefer_ipv4" if use_v6 else "ipv4_only"
-    dns_config["fakeip"] = {
-        "enabled": True,
-        "inet4_range": "28.0.0.0/8",
-        **({"inet6_range": "f2b0::/18"} if use_v6 else {}),
-    }
+    if use_fakeip:
+        dns_config["fakeip"] = {
+            "enabled": True,
+            "inet4_range": "198.18.0.0/15",
+            **({"inet6_range": "fc00::/18"} if use_v6 else {}),
+        }
     return dns_config
 
 
@@ -908,7 +922,7 @@ if __name__ == "__main__":
                     "0.0.0.0:9090" if args.lan else "127.0.0.1:9090"
                 ),
                 "external_ui": "ui",
-                "default_mode": "Enhanced",
+                "default_mode": "Rule",
                 "external_ui_download_url": "https://mirror.ghproxy.com/https://github.com/MetaCubeX/metacubexd/archive/gh-pages.zip",
                 "external_ui_download_detour": "direct",
             },
@@ -929,6 +943,7 @@ if __name__ == "__main__":
             listen_lan=args.lan,
             docker=args.docker,
             use_fakeip=args.fakeip,
+            platform=args.platform,
         ),
         "outbounds": get_outbounds(
             rule_config=(rules[args.config]),
