@@ -148,7 +148,7 @@ plugins:
         - addr: "quic://dns.alidns.com:853"  #QUIC牛逼
           dial_addr: "223.6.6.6"
         - addr: "tls://dot.pub" #不要改，只有tls和tcp支持pipeline
-          enable_pipeline: true
+          enable_pipeline: false
           insecure_skip_verify: false
           dial_addr: "119.29.29.29"
 
