@@ -145,7 +145,8 @@ plugins:
           dial_addr: "223.5.5.5"
           insecure_skip_verify: true
           enable_http3: true          #确实支持h3，已测试
-        - addr: "quic://223.5.5.5"  #QUIC牛逼
+        - addr: "quic://dns.alidns.com:853"  #QUIC牛逼
+          dial_addr: "223.6.6.6"
         - addr: "tls://dot.pub" #不要改，只有tls和tcp支持pipeline
           enable_pipeline: true
           insecure_skip_verify: false
@@ -174,7 +175,7 @@ plugins:
       - exec: $cache_cn
       - matches: has_resp
         exec: accept
-      - exec: ecs 2408:8214:213::1  #修改点 公网IP 无须更新 使用/48段 使用自己的V6让chatgpt转换
+      - exec: ecs 2409:8a28:3ca5::1  #修改点 公网IP 无须更新 使用/48段 使用自己的V6让chatgpt转换
       - exec: $forward_local
       - matches:
         - "rcode 0"
@@ -191,7 +192,7 @@ plugins:
       - exec: $cache_google
       - matches: has_resp
         exec: accept
-      - exec: ecs 2408:8214:213::1  #修改点 使用自己的公网IP，无须更新
+      - exec: ecs 2409:8a28:3ca5::1  #修改点 使用自己的公网IP，无须更新
       - exec: $forward_google
       - matches:
         - "rcode 0"
