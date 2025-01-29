@@ -17,9 +17,9 @@ parser.add_argument(
 )
 parser.add_argument("--tun", help="use tun inbound", action="store_true")
 parser.add_argument("--mixed", help="use mixed inbound", action="store_true")
-parser.add_argument("--lan", help="use lan mode", action="store_true")
+parser.add_argument("--lan", help="use lan mode", action="store_false")
 parser.add_argument("--docker", help="docker version", action="store_true")
-parser.add_argument("--dns_private", help="direct dns", type=str, default="dhcp://auto")
+parser.add_argument("--dns_private", help="direct dns", type=str, default="local")
 parser.add_argument(
     "--dns_direct", help="direct dns", type=str, default="h3://dns.alidns.com/dns-query"
 )
@@ -29,7 +29,10 @@ parser.add_argument(
     type=str,
     default="https://cloudflare-dns.com/dns-query",
 )
-parser.add_argument("--platform", type=str, choices=["linux", "darwin", "windows"])
+parser.add_argument(
+    "--platform", type=str, choices=["linux", "darwin", "windows", "openwrt"]
+)
+parser.add_argument("--fakeip", type=bool, default=True)
 args = parser.parse_args()
 
 
@@ -236,23 +239,22 @@ def get_rule_set(rule_config):
                 rule_sets.append(get_rule_set_url(rule_type="inline", name=name))
     if not find:
         rule_sets.append(get_rule_set_url(rule_type="geosite", name="geolocation-!cn"))
-    rule_sets.append(
-        {
-            "tag": "fakeip-filter",
-            "type": "remote",
-            "format": "binary",
-            "path": "./fakeip-filter.srs",
-            "url": "https://github.com/DustinWin/ruleset_geodata/releases/download/sing-box-ruleset/fakeip-filter-lite.srs",
-            "download_detour": "节点选择",
-        }
-    )
     return rule_sets
 
 
-def get_route_rules(rule_config):
+def get_route_rules(rule_config, platform: str, use_fakeip):
     route_rules = []
-    route_rules.append({"protocol": "dns", "outbound": "dns"})
-    route_rules.append({"protocol": ["stun", "quic"], "outbound": "🛑 Block"})
+    if platform == "openwrt":
+        route_rules.append({"inbound": "dns-in", "outbound": "dns"})
+    if not (platform == "openwrt" and use_fakeip):
+        route_rules.append({"protocol": "dns", "outbound": "dns"})
+    route_rules.append(
+        {
+            "domain_suffix": ["dns.google", "one.one.one.one", "dns.cloudflare.com"],
+            "outbound": "dns",
+        }
+    )
+    # route_rules.append({"protocol": ["stun", "quic"], "outbound": "🛑 Block"})
     rule_types = ("geoip", "geosite", "inline")
     for key, value in rule_config.items():
         if key == GLOBAL_DETOUR:
@@ -289,9 +291,9 @@ def get_route_rules(rule_config):
             route_rules.append(
                 {
                     "type": "logical",
-                    "mode": value["model"],
-                    "rules": [{"protocol": "dns"}, {"port": 53}],
-                    "outbound": "dns",
+                    "mode": value["mode"],
+                    "rules": value["rules"],
+                    "outbound": value["outbound"],
                 }
             )
         elif "ip_is_private" in value:
@@ -299,7 +301,7 @@ def get_route_rules(rule_config):
     return route_rules
 
 
-def get_outbounds(rule_config, place_outbound):
+def get_outbounds(rule_config, place_outbound, use_fakeip: bool, platform: str):
     outbounds = []
     place_list = list(place_outbound.keys())
 
@@ -602,12 +604,6 @@ rules = {
         },
     },
     "simple": {
-        "dns-catch": {
-            "type": "logical",
-            "model": "or",
-            "rules": [{"protocol": "dns"}, {"port": 53}],
-            "outbound": "dns",
-        },
         "ip_is_private": {"ip_is_private": True, "outbound": "🎯 Direct"},
         "clash_global": {"clash_mode": "Global", "outbound": "节点选择"},
         "clash_direct": {"clash_mode": "Direct", "outbound": "🎯 Direct"},
@@ -664,17 +660,27 @@ single_selecor = {
 
 
 def get_inbounds(
-    use_tun: bool, use_mixed: bool, use_v6: bool, listen_lan: bool, docker
+    use_tun: bool,
+    use_mixed: bool,
+    use_v6: bool,
+    listen_lan: bool,
+    docker: bool,
+    use_fakeip: bool,
 ):
     result = []
+    if use_fakeip:
+        result.append(
+            {"type": "direct", "tag": "dns-in", "listen": "::", "listen_port": 6666}
+        )
     if use_mixed:
         result.append(
             {
                 "type": "mixed",
+                "tag": "mixed",
                 "listen": "0.0.0.0" if listen_lan else "127.0.0.1",
                 "listen_port": 7890,
-                "sniff": True,
-                "sniff_override_destination": True,
+                "sniff": False if use_fakeip else True,
+                "sniff_override_destination": False,
                 "users": [],
                 "set_system_proxy": False if docker or use_tun else True,
                 "tcp_fast_open": True,
@@ -688,12 +694,11 @@ def get_inbounds(
             {
                 "type": "tun",
                 "tag": "tun",
-                "inet4_address": ["172.19.0.1/30"],
-                **({"inet6_address": ["fdfd:9527::1/32"]} if use_v6 else {}),
+                "address": ["28.0.0.0/8"] + (["f2b0::/18"] if use_v6 else []),
                 "mtu": 9000,
                 "auto_route": True,
                 "strict_route": True,
-                "sniff": True,
+                "sniff": False if use_fakeip else True,
                 "endpoint_independent_nat": False,
                 "stack": "system",
                 "platform": {
@@ -708,7 +713,9 @@ def get_inbounds(
     return result
 
 
-def get_dns_configs(dns_private, dns_direct, dns_remote, use_v6):
+def get_dns_configs(
+    dns_private, dns_direct, dns_remote, use_v6: bool, use_fakeip: bool, platform
+):
     dns_config = {}
 
     # build servers
@@ -716,7 +723,7 @@ def get_dns_configs(dns_private, dns_direct, dns_remote, use_v6):
         {
             "tag": "dns-remote",
             "address": dns_remote,
-            "detour": GLOBAL_DETOUR,
+            "detour": GLOBAL_DETOUR if platform != "openwrt" else "direct",
             "address_resolver": "dns-private",
         },
         {
@@ -731,69 +738,96 @@ def get_dns_configs(dns_private, dns_direct, dns_remote, use_v6):
             "detour": "direct",
         },
         {"tag": "dns-block", "address": "rcode://success"},
-        {"tag": "dns-fakeip", "address": "fakeip"},
     ]
+    if use_fakeip:
+        dns_config["servers"].append({"tag": "dns-fakeip", "address": "fakeip"})
 
     # build rules
-    dns_config["rules"] = [
-        {"outbound": "any", "server": "dns-direct", "disable_cache": True},
-        {"clash_mode": "Direct", "server": "dns-direct"},
-        {
-            "clash_mode": "Global",
-            "server": "dns-remote",
-        },
-        {
-            "domain": [
-                "ghproxy.com",
-                "cdn.jsdelivr.net",
-                "testingcf.jsdelivr.net",
-            ],
-            "server": "dns-direct",
-        },
-        {
-            "rule_set": "geosite-category-ads-all",
-            # 追踪域名DNS解析被黑洞
-            "domain_suffix": [
-                "appcenter.ms",
-                "app-measurement.com",
-                "firebase.io",
-                "crashlytics.com",
-                "google-analytics.com",
-            ],
-            "server": "dns-block",
-            "disable_cache": True,
-            "rewrite_ttl": 0,
-        },
-        {
-            "rule_set": ["inline-localdomain"],
-            "server": "dns-private",
-        },
-        {
-            "rule_set": "geosite-geolocation-cn",
-            "query_type": ["A", "AAAA"],
-            "server": "dns-direct",
-        },
-        {
-            "fallback_rules": [
-                {"rule_set": ["geoip-cn"], "server": "dns-direct"},
-                {"match_all": True, "server": "dns-fakeip", "rewrite_ttl": 1},
-            ],
-            "server": "dns-remote",
-            "allow_fallthrough": True,
-        },
-    ]
-
-    dns_config["final"] = "dns-direct"
+    if use_fakeip:
+        dns_config["rules"] = [
+            {"outbound": "any", "server": "dns-private", "disable_cache": True},
+            {
+                "inbound": "dns-in",
+                "server": "dns-fakeip",
+                "disable_cache": False,
+                "rewrite_ttl": 1,
+            },
+            {
+                "rule_set": "geosite-geolocation-cn",
+                "query_type": ["A", "AAAA"],
+                "server": "dns-direct",
+            },
+            {
+                "type": "logical",
+                "mode": "and",
+                "rules": [
+                    {
+                        "rule_set": "geosite-geolocation-!cn",
+                    },
+                    {"rule_set": "geoip-cn"},
+                ],
+                "server": "dns-remote",
+                "client_subnet": "112.12.250.166/32",
+            },
+            {
+                "query_type": ["A", "AAAA"],
+                "server": "dns-fakeip",
+            },
+        ]
+        dns_config["final"] = "dns-remote"
+    else:
+        dns_config["rules"] = [
+            {"outbound": "any", "server": "dns-private", "disable_cache": True},
+            {
+                "inbound": "dns-in",
+                "server": "dns-fakeip",
+                "disable_cache": False,
+                "rewrite_ttl": 1,
+            },
+            {"clash_mode": "Direct", "server": "dns-direct"},
+            {
+                "clash_mode": "Global",
+                "server": "dns-remote",
+            },
+            {
+                "domain": [
+                    "ghproxy.com",
+                    "cdn.jsdelivr.net",
+                    "testingcf.jsdelivr.net",
+                ],
+                "server": "dns-direct",
+            },
+            {
+                "rule_set": "geosite-category-ads-all",
+                # 追踪域名DNS解析被黑洞
+                "domain_suffix": [
+                    "appcenter.ms",
+                    "app-measurement.com",
+                    "firebase.io",
+                    "crashlytics.com",
+                    "google-analytics.com",
+                ],
+                "server": "dns-block",
+                "disable_cache": True,
+                "rewrite_ttl": 0,
+            },
+            {
+                "rule_set": ["inline-localdomain"],
+                "server": "dns-private",
+            },
+            {
+                "rule_set": "geosite-geolocation-cn",
+                "query_type": ["A", "AAAA"],
+                "server": "dns-direct",
+            },
+        ]
+        dns_config["final"] = "dns-direct"
     dns_config["independent_cache"] = True
-    dns_config["lazy_cache"] = True
-    dns_config["mapping_override"] = True
-    dns_config["reverse_mapping"] = True
     dns_config["strategy"] = "prefer_ipv4" if use_v6 else "ipv4_only"
     dns_config["fakeip"] = {
         "enabled": True,
-        "inet4_range": "198.18.0.0/15",
-        **({"inet6_range": "fc00::/18"} if use_v6 else {}),
-        "exclude_rule": {"rule_set": ["fakeip-filter", "geoip-private"]},
+        "inet4_range": "28.0.0.0/8",
+        **({"inet6_range": "f2b0::/18"} if use_v6 else {}),
     }
     return dns_config
 
@@ -818,8 +852,9 @@ if __name__ == "__main__":
             if agent == "sing-box":
                 data = json.loads(response.text)
                 outbounds = data["outbounds"]
+                print(outbounds)
                 for outbound in outbounds:
-                    if outbound["type"] not in ["selector", "dns", "direct", "block"]:
+                    if outbound["type"] in ["selector", "dns", "direct", "block"]:
                         continue
                     flag = True
                     for bn in black_list:
@@ -834,6 +869,7 @@ if __name__ == "__main__":
                                 place_outbound[place_name].append(outbound)
                                 flag = False
                                 break
+
             elif agent == "clash":
                 # 使用PyYAML解析响应的内容
                 data = yaml.safe_load(response.text)
@@ -883,6 +919,8 @@ if __name__ == "__main__":
             dns_direct=args.dns_direct,
             dns_remote=args.dns_remote,
             use_v6=args.use_v6,
+            use_fakeip=args.fakeip,
+            platform=args.platform,
         ),
         "inbounds": get_inbounds(
             use_tun=args.tun,
@@ -890,10 +928,13 @@ if __name__ == "__main__":
             use_v6=args.use_v6,
             listen_lan=args.lan,
             docker=args.docker,
+            use_fakeip=args.fakeip,
         ),
         "outbounds": get_outbounds(
             rule_config=(rules[args.config]),
             place_outbound=place_outbound,
+            use_fakeip=args.fakeip,
+            platform=args.platform,
         ),
         "route": {
             "auto_detect_interface": True,  # 如果您是Linux、Windows 和 macOS用户，请将此条注释撤销，使 final 其生效，以免造成问题（上一行记得加,）
@@ -901,7 +942,11 @@ if __name__ == "__main__":
             "rule_set": get_rule_set(
                 (rules[args.config]),
             ),
-            "rules": get_route_rules(rule_config=(rules[args.config])),
+            "rules": get_route_rules(
+                rule_config=(rules[args.config]),
+                platform=args.platform,
+                use_fakeip=args.fakeip,
+            ),
         },
     }
     with open(
@@ -915,4 +960,4 @@ if __name__ == "__main__":
         "w",
         encoding="utf-8",
     ) as result_file:
-        result_file.write(json.dumps(result_json, ensure_ascii=False))
+        result_file.write(json.dumps(result_json, ensure_ascii=False, indent=2))
