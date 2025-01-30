@@ -788,6 +788,7 @@ def get_dns_configs(
                         "A",
                         "AAAA",
                     ],
+                    "invert": True,
                     "server": "dns-refused",
                     "disable_cache": True,
                 },
@@ -832,6 +833,16 @@ def get_dns_configs(
                 "rule_set": "geosite-geolocation-cn",
                 "query_type": ["A", "AAAA"],
                 "server": "dns-direct",
+            },
+            {
+                "type": "logical",
+                "mode": "and",
+                "rules": [
+                    {"rule_set": "geosite-geolocation-cn", "invert": True},
+                    {"rule_set": "geoip-cn"},
+                ],
+                "server": "dns-remote",
+                "client_subnet": "114.114.114.114/24",  # Any China client IP address
             },
         ]
         dns_config["final"] = "dns-remote"
