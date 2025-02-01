@@ -32,7 +32,7 @@ parser.add_argument(
 parser.add_argument(
     "--platform", type=str, choices=["linux", "darwin", "windows", "openwrt"]
 )
-parser.add_argument("--fakeip", type=bool, default=True)
+parser.add_argument("--fakeip", type=bool, default=False)
 args = parser.parse_args()
 
 
@@ -83,10 +83,8 @@ def process_proxy(proxy):
                 "enabled": True,
                 "disable_sni": False,
                 "server_name": proxy["sni"],
-                "insecure": False,
+                "insecure": proxy["skip-cert-verify"],
             }
-            if "skip-cert-verify" in proxy:
-                result["tls"]["insecure"] = True
         if "network" in proxy:
             result["transport"] = {
                 "type": "ws",
@@ -111,14 +109,14 @@ def process_proxy(proxy):
         result["uuid"] = proxy["uuid"]
         result["alter_id"] = proxy["alterId"]
         result["security"] = proxy["cipher"]
-        if "netowork" not in proxy:
-            print(proxy)
+        if proxy.get("network", None) is None:
+            print("can't deal ", proxy)
             pass
         elif proxy["network"] == "ws":
             result["transport"] = {
                 "type": "ws",
                 "path": proxy["ws-path"],
-                "headers": {"Host": [proxy["ws-opts"]["headers"]["Host"]]},
+                "headers": proxy["ws-opts"]["headers"],
             }
         elif proxy["network"] == "grpc":
             result["transport"] = {
@@ -759,8 +757,18 @@ def get_dns_configs(
             + (
                 [
                     {
-                        "rule_set": "geosite-geolocation-!cn",
-                        "query_type": ["A", "AAAA"],
+                        "type": "logical",
+                        "mode": "and",
+                        "rules": [
+                            {
+                                "rule_set": [
+                                    "geosite-geolocation-cn",
+                                    "geosite-category-games@cn",
+                                ],
+                                "invert": True,
+                            },
+                            {"query_type": ["A", "AAAA"]},
+                        ],
                         "server": "dns-fakeip",
                     },
                 ]
@@ -776,9 +784,17 @@ def get_dns_configs(
             )
             + [
                 {
-                    "rule_set": "geosite-geolocation-!cn",
-                    "query_type": [
-                        "CNAME",
+                    "type": "logical",
+                    "mode": "and",
+                    "rules": [
+                        {
+                            "rule_set": [
+                                "geosite-geolocation-cn",
+                                "geosite-category-games@cn",
+                            ],
+                            "invert": True,
+                        },
+                        {"query_type": ["CNAME"]},
                     ],
                     "server": "dns-remote",
                 },
@@ -866,7 +882,10 @@ if __name__ == "__main__":
         headers = {"User-Agent": "clash-verge/v1.3.8"}
         result_dict = {"proxies": []}
         for line in fp.readlines():
-            url, agent = line.strip().split(" ")
+            line = line.strip()
+            if len(line) == 0:
+                continue
+            url, agent = line.split(" ")
             headers["User-Agent"] = agent
             if len(url) == 0:
                 break
@@ -877,7 +896,7 @@ if __name__ == "__main__":
             if agent == "sing-box":
                 data = json.loads(response.text)
                 outbounds = data["outbounds"]
-                print(outbounds)
+                # print(outbounds)
                 for outbound in outbounds:
                     if outbound["type"] in ["selector", "dns", "direct", "block"]:
                         continue
@@ -937,7 +956,7 @@ if __name__ == "__main__":
                 "external_ui_download_url": "https://mirror.ghproxy.com/https://github.com/MetaCubeX/metacubexd/archive/gh-pages.zip",
                 "external_ui_download_detour": "direct",
             },
-            "cache_file": {"enabled": True, "store_fakeip": True},
+            "cache_file": {"enabled": True, "store_fakeip": args.fakeip},
         },
         "dns": get_dns_configs(
             dns_private=args.dns_private,
@@ -976,12 +995,13 @@ if __name__ == "__main__":
         },
     }
     with open(
-        "result_{}{}{}{}{}.json".format(
+        "result_{}{}{}{}{}{}.json".format(
             args.config,
             "_lan" if args.lan else "",
             "_v6" if args.use_v6 else "_v4",
             "_tun" if args.tun else "",
             "_mixed" if args.mixed else "",
+            "_fakeip" if args.fakeip else "_realip",
         ),
         "w",
         encoding="utf-8",
