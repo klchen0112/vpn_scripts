@@ -83,8 +83,9 @@ def process_proxy(proxy):
                 "enabled": True,
                 "disable_sni": False,
                 "server_name": proxy["sni"],
-                "insecure": proxy["skip-cert-verify"],
             }
+            if "skip-cert-verify" in proxy:
+                result["tls"]["insecure"] = proxy["skip-cert-verify"]
         if "network" in proxy:
             result["transport"] = {
                 "type": "ws",
