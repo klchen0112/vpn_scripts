@@ -17,7 +17,7 @@ parser.add_argument(
 )
 parser.add_argument("--tun", help="use tun inbound", action="store_true")
 parser.add_argument("--mixed", help="use mixed inbound", action="store_true")
-parser.add_argument("--lan", help="use lan mode", action="store_false")
+parser.add_argument("--lan", help="use lan mode", action="store_true")
 parser.add_argument("--docker", help="docker version", action="store_true")
 parser.add_argument("--dns_private", help="direct dns", type=str, default="local")
 parser.add_argument(
@@ -160,24 +160,24 @@ def process_proxy(proxy):
 
 
 PLACE_PATTERNS = {
-    "🇭🇰 香港": r"🇭🇰|香港|港|hongkong",
-    "🇺🇸 美国": r"🇺🇸|美国|united states",
-    "🇹🇼 台湾": r"🇹🇼|台湾",
-    "🇯🇵 日本": r"🇯🇵|日本|JP",
-    "🇰🇷 韩国": r"🇰🇷|韩国|KR",
-    "🇸🇬 新加坡": r"🇸🇬|新加坡|SG",
-    "🇷🇺 俄罗斯": r"🇷🇺|俄罗斯",
-    "🇫🇷 法国": r"🇫🇷|法国",
-    "🇬🇧 英国": r"🇬🇧|英国",
-    "🇩🇪 德国": r"🇩🇪|德国",
-    "🇨🇦 加拿大": r"🇨🇦|加拿大",
-    "🇦🇺 澳大利亚": r"🇦🇺|澳大利亚|澳洲",
+    "🇭🇰 香港": r"🇭🇰|香港|港|hongkong|Hong Kong",
+    "🇺🇸 美国": r"🇺🇸|美国|united states|United States",
+    "🇹🇼 台湾": r"🇹🇼|台湾|Taiwan",
+    "🇯🇵 日本": r"🇯🇵|日本|JP|Japan",
+    "🇰🇷 韩国": r"🇰🇷|韩国|KR|Korea",
+    "🇸🇬 新加坡": r"🇸🇬|新加坡|SG|Singapore",
+    "🇷🇺 俄罗斯": r"🇷🇺|俄罗斯|Russia",
+    "🇫🇷 法国": r"🇫🇷|法国|French",
+    "🇬🇧 英国": r"🇬🇧|英国|United Kingdom",
+    "🇩🇪 德国": r"🇩🇪|德国|German",
+    "🇨🇦 加拿大": r"🇨🇦|加拿大|Canada",
+    "🇦🇺 澳大利亚": r"🇦🇺|澳大利亚|澳洲|Australia",
     "🇵🇭 菲律宾": r"🇵🇭|菲律宾",
     "🇹🇷 土耳其": r"🇹🇷|土耳其",
     "🇦🇷 阿根廷": r"🇦🇷|阿根廷",
     "🇺🇦 乌克兰": r"🇺🇦|乌克兰",
     "🇧🇷 巴西": r"🇧🇷|巴西",
-    "🇮🇳 印度": r"🇮🇳|印度",
+    "🇮🇳 印度": r"🇮🇳|印度|India",
     "🇮🇩 印尼": r"🇮🇩|印尼",
     "🇮🇹 意大利": r"🇮🇹|意大利",
     "🇪🇬 埃及": r"🇪🇬|埃及",
@@ -193,8 +193,8 @@ PLACE_PATTERNS = {
 LOG_SETTINGS = {
     "disabled": False,
     "level": "warn",
-    # "output": "box.log",
-    "timestamp": True,
+    "output": "/var/log/sing-box.log",
+    "timestamp": False,
 }
 GLOBAL_DETOUR = "✈️ Proxy"
 
@@ -208,7 +208,7 @@ def get_rule_set_url(rule_type: str, name: str):
         return {
             "tag": f"{rule_type}-{name}",
             "type": "inline",
-            "rules": [local_RULES[f"{rule_type}-{name}"]],
+            "rules": local_RULES[f"{rule_type}-{name}"],
         }
     else:
         raise ValueError("Wrong rule_type")
@@ -248,12 +248,6 @@ def get_route_rules(rule_config, platform: str, use_fakeip):
         route_rules.append({"inbound": "dns-in", "outbound": "dns"})
     if not (platform == "openwrt" and use_fakeip):
         route_rules.append({"protocol": "dns", "outbound": "dns"})
-    route_rules.append(
-        {
-            "domain_suffix": ["dns.google", "one.one.one.one", "dns.cloudflare.com"],
-            "outbound": "✈️ Proxy",
-        }
-    )
     # route_rules.append({"protocol": ["stun", "quic"], "outbound": "🛑 Block"})
     rule_types = ("geoip", "geosite", "inline")
     for key, value in rule_config.items():
@@ -410,17 +404,18 @@ rules = {
             "outbounds": ["🇺🇸 美国", "🎯 Direct"],
             "default": "🇺🇸 美国",
         },
+        " Dev-Global": {
+            "type": "selector",
+            "geosite": ["category-dev", "category-container"],
+            "inline": ["nixos"],
+            "outbounds": [GLOBAL_DETOUR, "🎯 Direct"],
+            "default": GLOBAL_DETOUR,
+        },
         " Dev-CN": {
             "type": "selector",
             "geosite": ["category-dev-cn"],
             "outbounds": ["🎯 Direct", GLOBAL_DETOUR],
             "default": "🎯 Direct",
-        },
-        " Dev-Global": {
-            "type": "selector",
-            "geosite": ["category-dev", "category-container"],
-            "outbounds": [GLOBAL_DETOUR, "🎯 Direct"],
-            "default": GLOBAL_DETOUR,
         },
         "Schoolar CN": {
             "type": "selector",
@@ -456,6 +451,7 @@ rules = {
         "Social Media CN": {
             "type": "selector",
             "geosite": ["category-social-media-cn"],
+            "inline": ["wechat"],
             "outbounds": ["🎯 Direct", GLOBAL_DETOUR],
             "default": "🎯 Direct",
         },
@@ -814,7 +810,7 @@ def get_dns_configs(
         dns_config["final"] = "dns-direct"
     else:
         dns_config["rules"] = [
-            {"outbound": "any", "server": "dns-private", "disable_cache": True},
+            {"outbound": "any", "server": "dns-resolver", "disable_cache": True},
             {"clash_mode": "Direct", "server": "dns-direct"},
             {
                 "clash_mode": "Global",
@@ -863,7 +859,7 @@ def get_dns_configs(
             },
         ]
         dns_config["final"] = "dns-remote"
-    dns_config["independent_cache"] = True
+
     dns_config["strategy"] = "prefer_ipv4" if use_v6 else "ipv4_only"
     if use_fakeip:
         dns_config["fakeip"] = {
@@ -899,7 +895,7 @@ if __name__ == "__main__":
                 outbounds = data["outbounds"]
                 # print(outbounds)
                 for outbound in outbounds:
-                    if outbound["type"] in ["selector", "dns", "direct", "block"]:
+                    if outbound["type"] in ["selector", "dns", "direct"]:
                         continue
                     flag = True
                     for bn in black_list:
@@ -941,9 +937,73 @@ if __name__ == "__main__":
         for domain in local_domain_file.readlines():
             print(domain)
             local_domain_list.append(domain.strip())
-    local_RULES["inline-localdomain"] = {
-        "domain_suffix": local_domain_list,
-    }
+    local_RULES["inline-localdomain"] = [
+        {
+            "domain_suffix": local_domain_list,
+        }
+    ]
+    local_RULES["inline-nixos"] = [
+        {
+            "domain_suffix": ["nixos.org", "garnix.io", "cachix.org"],
+        }
+    ]
+    local_RULES["inline-wechat"] = [
+        {
+            "domain": [
+                "dl.wechat.com",
+                "sgfindershort.wechat.com",
+                "sgilinkshort.wechat.com",
+                "sglong.wechat.com",
+                "sgminorshort.wechat.com",
+                "sgquic.wechat.com",
+                "sgshort.wechat.com",
+                "tencentmap.wechat.com.com",
+                "qlogo.cn",
+                "qpic.cn",
+                "servicewechat.com",
+                "tenpay.com",
+                "wechat.com",
+                "wechatlegal.net",
+                "wechatpay.com",
+                "weixin.com",
+                "weixin.qq.com",
+                "weixinbridge.com",
+                "weixinsxy.com",
+                "wxapp.tc.qq.com",
+            ]
+        },
+        {
+            "domain_suffix": [
+                ".qlogo.cn",
+                ".qpic.cn",
+                ".servicewechat.com",
+                ".tenpay.com",
+                ".wechat.com",
+                ".wechatlegal.net",
+                ".wechatpay.com",
+                ".weixin.com",
+                ".weixin.qq.com",
+                ".weixinbridge.com",
+                ".weixinsxy.com",
+                ".wxapp.tc.qq.com",
+            ]
+        },
+        {
+            "ip_cidr": [
+                "101.32.104.4/32",
+                "101.32.104.41/32",
+                "101.32.104.56/32",
+                "101.32.118.25/32",
+                "101.32.133.16/32",
+                "101.32.133.209/32",
+                "101.32.133.53/32",
+                "129.226.107.244/32",
+                "129.226.3.47/32",
+                "162.62.163.63/32",
+            ]
+        },
+    ]
+    local_RULES["inline-proccess"] = [{"process_name": ["tailscale", "tailscaled"]}]
 
     result_json = {
         "log": LOG_SETTINGS,
@@ -952,12 +1012,14 @@ if __name__ == "__main__":
                 "external_controller": (
                     "0.0.0.0:9090" if args.lan else "127.0.0.1:9090"
                 ),
-                "external_ui": "ui",
-                "default_mode": "Rule",
-                "external_ui_download_url": "https://mirror.ghproxy.com/https://github.com/MetaCubeX/metacubexd/archive/gh-pages.zip",
-                "external_ui_download_detour": "direct",
+                "external_ui": "dashboard",
+                "default_mode": "Enhanced",
             },
-            "cache_file": {"enabled": True, "store_fakeip": args.fakeip},
+            "cache_file": {
+                "enabled": True,
+                "store_fakeip": args.fakeip,
+                "store_rdrc": True,
+            },
         },
         "dns": get_dns_configs(
             dns_private=args.dns_private,
