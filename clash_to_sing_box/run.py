@@ -245,10 +245,10 @@ def get_rule_set(rule_config):
 def get_route_rules(rule_config, platform: str, use_fakeip):
     route_rules = []
     if platform == "openwrt":
-        route_rules.append({"inbound": "dns-in", "outbound": "dns"})
+        route_rules.append({"inbound": "dns-in", "action": "sniff"})
     if not (platform == "openwrt" and use_fakeip):
-        route_rules.append({"protocol": "dns", "outbound": "dns"})
-    # route_rules.append({"protocol": ["stun", "quic"], "outbound": "🛑 Block"})
+        route_rules.append({"action": "sniff"})
+    route_rules.append({"protocol": "dns", "action": "hijack-dns"})
     rule_types = ("geoip", "geosite", "inline")
     for key, value in rule_config.items():
         if key == GLOBAL_DETOUR:
@@ -342,7 +342,9 @@ def get_outbounds(rule_config, place_outbound, use_fakeip: bool, platform: str):
             continue
         if "type" not in value:
             continue
-        if value["type"] in ["direct", "dns", "block"]:
+        if value["type"] in [
+            "direct",
+        ]:
             outbounds.append({"tag": key, "type": value["type"]})
         elif value["type"] == "selector":
             outbounds.append(
@@ -375,8 +377,6 @@ rules = {
             "outbound": "🎯 Direct",
         },
         "direct": {"type": "direct"},
-        "dns": {"type": "dns"},
-        "block": {"type": "block"},
         GLOBAL_DETOUR: {
             "type": "selector",
             "outbounds": ["自动选择", "地区选择", "节点选择", "direct"],
@@ -386,17 +386,6 @@ rules = {
             "type": "selector",
             "outbounds": ["direct", GLOBAL_DETOUR],
             "default": "direct",
-        },
-        "🛑 Block": {
-            "type": "selector",
-            "outbounds": ["block", "direct", GLOBAL_DETOUR],
-            "default": "block",
-        },
-        "󱤫 广告过滤": {
-            "type": "selector",
-            "geosite": ["category-ads-all"],
-            "outbounds": ["🛑 Block", "🎯 Direct"],
-            "default": "🛑 Block",
         },
         "🤖 AI": {
             "type": "selector",
@@ -614,22 +603,10 @@ rules = {
         },
         "direct": {"type": "direct"},
         "dns": {"type": "dns"},
-        "block": {"type": "block"},
         "🎯 Direct": {
             "type": "selector",
             "outbounds": ["direct", GLOBAL_DETOUR],
             "default": "direct",
-        },
-        "󱤫 广告过滤": {
-            "type": "selector",
-            "geosite": ["category-ads-all"],
-            "outbounds": ["🛑 Block", "🎯 Direct"],
-            "default": "🛑 Block",
-        },
-        "🛑 Block": {
-            "type": "selector",
-            "outbounds": ["block", "direct", GLOBAL_DETOUR],
-            "default": "block",
         },
         "🇨🇳 CNIP": {
             "type": "selector",
@@ -676,8 +653,6 @@ def get_inbounds(
                 "tag": "mixed",
                 "listen": "0.0.0.0" if listen_lan else "127.0.0.1",
                 "listen_port": 7890,
-                "sniff": True,
-                "sniff_override_destination": False,
                 "users": [],
                 "set_system_proxy": False if docker or use_tun else True,
                 "tcp_fast_open": True,
@@ -695,7 +670,6 @@ def get_inbounds(
                 "mtu": 9000,
                 "auto_route": True,
                 "strict_route": True,
-                "sniff": True,
                 "endpoint_independent_nat": False,
                 "stack": "system",
                 "platform": {
@@ -823,20 +797,6 @@ def get_dns_configs(
                     "testingcf.jsdelivr.net",
                 ],
                 "server": "dns-direct",
-            },
-            {
-                "rule_set": "geosite-category-ads-all",
-                # 追踪域名DNS解析被黑洞
-                "domain_suffix": [
-                    "appcenter.ms",
-                    "app-measurement.com",
-                    "firebase.io",
-                    "crashlytics.com",
-                    "google-analytics.com",
-                ],
-                "server": "dns-success",
-                "disable_cache": True,
-                "rewrite_ttl": 0,
             },
             {
                 "rule_set": ["inline-localdomain"],
