@@ -1,4 +1,0 @@
-subscription {
-  # 在下面填入你的订阅链接。
-  dualnet: "https://d1.dlsdist.net/api/v1/client/subscribe?token=4d7cd0838c8c930931d3e0e7b8778a85"
-}
