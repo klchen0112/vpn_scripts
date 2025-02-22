@@ -142,8 +142,8 @@
             editableOverlay = workspace.mkEditablePyprojectOverlay {
               # Use environment variable
               root = "$REPO_ROOT";
-              # Optional: Only enable editable for these packages
-              # members = [ "hello-world" ];
+             #   Optional: Only enable editable for these packages
+              members = [ "hello-world" ];
             };
 
             # Override previous set with our overrideable overlay.
@@ -160,8 +160,8 @@
                       root = old.src;
                       fileset = lib.fileset.unions [
                         (old.src + "/pyproject.toml")
-                        (old.src + "/README.md")
-                        (old.src + "/src/hello_world/__init__.py")
+                        # (old.src + "/README.md")
+                        # (old.src + "/src/hello_world/__init__.py")
                       ];
                     };
 
