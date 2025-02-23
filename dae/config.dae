@@ -1,12 +1,16 @@
 
+include {
+  subscription.dae
+}
 group {
   proxy {
-    filter: name(keyword: JP,keyword: '日本', keyword: SG,keyword: '新加坡')
-    # filter: subtag(yiyuan) [add_latency: 300ms]
+    filter: subtag(cnix)
+    filter: subtag(mojie) [add_latency: 300ms]
+    filter: subtag(peiqian) [add_latency: 500ms]
     policy: min_avg10
   }
   ai-chat {
-    filter: name(keyword: US, keyword: '美国')
+    filter: name(keyword: GPT)
     policy: min_moving_avg
   }
   steam {
@@ -41,7 +45,7 @@ routing {
   # l4proto(udp) && dport(443) -> block
 
 
-  domain(geosite:bing@cn) -> direct
+  domain(geosite:bing@cn,geosite:category-dev-cn,geosite:category-scholar-cn,geosite:category-education-cn,geosite:category-social-media-cn,geosite:category-media-cn) -> direct
   domain(geosite:bing) && !domain(geosite:bing@cn) -> ai-chat
   domain(geosite:category-ai-chat-!cn,geosite:category-scholar-!cn) -> ai-chat
   domain(suffix: copilot.microsoft.com,
@@ -62,7 +66,7 @@ routing {
       suffix: cp4.cloudflare.com,
       suffix: apple-relay.apple.com) -> ai-chat
   domain(geosite:bing) -> ai-chat
-
+  domain(geosite:category-porn) -> proxy
   domain(geosite:gfw) -> proxy
 
   dip(geoip:private,geoip:cn) -> direct
@@ -86,7 +90,7 @@ dns {
   routing {
     request {
       qname(suffix: klchen.dns.army) -> private
-      qname(geosite:private, geosite:apple-cn, geosite:google-cn, geosite:category-games@cn) -> localdns
+      qname(geosite:private, geosite:apple-cn, geosite:google-cn, geosite:category-games@cn,geosite:category-game-accelerator-cn) -> localdns
       qname(geosite:geolocation-!cn) && !qname(geosite:bing@cn) -> overseadns
       qname(geosite:bing@cn, geosite:cn) -> localdns
       fallback: overseadns
