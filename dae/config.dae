@@ -1,7 +1,103 @@
 
-include {
-    config.d/*.dae
+group {
+  proxy {
+    filter: name(keyword: JP,keyword: '日本', keyword: SG,keyword: '新加坡')
+    # filter: subtag(yiyuan) [add_latency: 300ms]
+    policy: min_avg10
+  }
+  ai-chat {
+    filter: name(keyword: US, keyword: '美国')
+    policy: min_moving_avg
+  }
+  steam {
+    # Filter nodes from the global node pool defined by the subscription and node section above.
+        filter: name(keyword: JP,keyword: '日本')
+        # Select the node with min moving average of latencies from the group for every connection.
+        policy: min_moving_avg
+
+        # Override tcp_check_url in global.
+        tcp_check_url: 'http://test.steampowered.com'
+        # Override tcp_check_http_method in global
+        #tcp_check_http_method: HEAD
+        # Override udp_check_dns in global
+        #udp_check_dns: 'dns.google:53,8.8.8.8,2001:4860:4860::8888'
+        # Override check_interval in global
+        #check_interval: 30s
+        # Override check_tolerance in global
+        #check_tolerance: 50ms
+  }
 }
+
+# 更多的 Routing 样例见 https://github.com/daeuniverse/dae/blob/main/docs/en/configuration/routing.md
+routing {
+  # 进程规则
+  pname(NetworkManager) -> direct
+  pname(tailscale,tailscaled) -> must_direct
+  ### DSCP rule (match DSCP; is useful for BT bypass). See https://github.com/daeuniverse/dae/discussions/295
+  dscp(0x4) -> direct
+
+  dip(224.0.0.0/3, 'ff00::/8') -> direct
+  domain(geosite:tld-cn, geosite:private, geosite:apple-cn, geosite:google-cn, geosite:category-games@cn, geosite:category-pt) -> direct
+  # l4proto(udp) && dport(443) -> block
+
+
+  domain(geosite:bing@cn) -> direct
+  domain(geosite:bing) && !domain(geosite:bing@cn) -> ai-chat
+  domain(geosite:category-ai-chat-!cn,geosite:category-scholar-!cn) -> ai-chat
+  domain(suffix: copilot.microsoft.com,
+      suffix: gateway-copilot.bingviz.microsoftapp.net,
+      suffix: mobile.events.data.microsoft.com,
+      suffix: graph.microsoft.com,
+      suffix: analytics.adjust.com,
+      suffix: analytics.adjust.net.in,
+      suffix: api.revenuecat.com,
+      suffix: t-msedge.net,
+      suffix: cloudapp.azure.com,
+      suffix: browser-intake-datadoghq.com,
+      suffix: in.appcenter.ms,
+      suffix: guzzoni.apple.com,
+      suffix: smoot.apple.com,
+      suffix: apple-relay.cloudflare.com,
+      suffix: apple-relay.fastly-edge.com,
+      suffix: cp4.cloudflare.com,
+      suffix: apple-relay.apple.com) -> ai-chat
+  domain(geosite:bing) -> ai-chat
+
+  domain(geosite:gfw) -> proxy
+
+  dip(geoip:private,geoip:cn) -> direct
+  fallback: proxy
+}
+
+dns {
+  ipversion_prefer: 4
+  fixed_domain_ttl {
+    dns.alidns.com: 604800
+    doh.pub: 604800
+    dns.opendns.com: 604800
+    dns.google: 604800
+    one.one.one.one: 604800
+    dualnode.pw: 604800
+  }
+  upstream {
+    localdns: 'h3://dns.alidns.com:443/dns-query'
+    overseadns: 'https://208.67.220.220/dns-query'
+  }
+  routing {
+    request {
+      qname(geosite:private, geosite:apple-cn, geosite:google-cn, geosite:category-games@cn) -> localdns
+      qname(geosite:geolocation-!cn) && !qname(geosite:bing@cn) -> overseadns
+      qname(geosite:bing@cn, geosite:cn) -> localdns
+      fallback: overseadns
+    }
+    response {
+      # 可信的 upstream。总是接受它的回复。
+      upstream(overseadns) && ip(geoip:cn) -> localdns
+      fallback: accept
+    }
+  }
+}
+
 global {
   # 绑定到 LAN 和/或 WAN 接口。将下述接口替换成你自己的接口名。
   lan_interface: br-lan
