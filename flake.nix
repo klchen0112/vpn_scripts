@@ -22,6 +22,9 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     flake-utils.url = "github:numtide/flake-utils";
+     uv2nix_hammer_overrides.url = "github:TyberiusPrime/uv2nix_hammer_overrides";
+    uv2nix_hammer_overrides.inputs.nixpkgs.follows = "nixpkgs";
+
   };
 
   outputs =
@@ -32,6 +35,7 @@
       pyproject-nix,
       pyproject-build-systems,
       flake-utils,
+        uv2nix_hammer_overrides,
       ...
     }:
      flake-utils.lib.eachDefaultSystem (system:
@@ -61,11 +65,18 @@
       # This is an additional overlay implementing build fixups.
       # See:
       # - https://pyproject-nix.github.io/uv2nix/FAQ.html
-      pyprojectOverrides = _final: _prev: {
+      pyprojectOverrides =pkgs.lib.composeExtensions (uv2nix_hammer_overrides.overrides pkgs) (
+         # use uv2nix_hammer_overrides.overrides_debug
+            #   to see which versions were matched to which overrides
+            #  use uv2nix_hammer_overrides.overrides_strict / overrides_strict_debug
+            #  to use only overrides exactly matching your python package versions
+
+         _final: _prev: {
         # Implement build fixups here.
         # Note that uv2nix is _not_ using Nixpkgs buildPythonPackage.
         # It's using https://pyproject-nix.github.io/pyproject.nix/build.html
-      };
+        }
+      );
 
       # This example is only using x86_64-linux
       pkgs = nixpkgs.legacyPackages.${system};
@@ -92,15 +103,15 @@
       # Package a virtual environment as our main application.
       #
       # Enable no optional dependencies for production build.
-      packages.default = pythonSet.mkVirtualEnv "hello-world-env" workspace.deps.default;
+      packages.default = pythonSet.mkVirtualEnv "vpns-scripts" workspace.deps.default;
 
       # Make hello runnable with `nix run`
-      apps.${system} = {
-        default = {
-          type = "app";
-          program = "${self.packages.${system}.default}/bin/hello";
-        };
-      };
+      # apps.${system} = {
+      #   default = {
+      #     type = "app";
+      #     program = "${self.packages.${system}.default}/bin/hello";
+      #   };
+      # };
 
       # This example provides two different modes of development:
       # - Impurely using uv to manage virtual environments
