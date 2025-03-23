@@ -12,7 +12,7 @@ plugins:
   - tag: cache_all
     type: cache
     args:
-      size: 20000000
+      size: 4096
       lazy_cache_ttl: 259200000
       dump_file: /etc/mosdns/cache_all.dump
       dump_interval: 3600
@@ -21,7 +21,7 @@ plugins:
   - tag: cache_cn
     type: cache
     args:
-      size: 20000000
+      size: 2048
       lazy_cache_ttl: 259200000
       dump_file: /etc/mosdns/cache_cn.dump
       dump_interval: 36000
@@ -30,7 +30,7 @@ plugins:
   - tag: cache_google
     type: cache
     args:
-      size: 20000000
+      size: 2048
       lazy_cache_ttl: 259200000
       dump_file: /etc/mosdns/cache_google.dump
       dump_interval: 36000
@@ -39,7 +39,7 @@ plugins:
   - tag: cache_cf
     type: cache
     args:
-      size: 20000000
+      size: 2048
       lazy_cache_ttl: 259200000
       dump_file: /etc/mosdns/cache_cf.dump
       dump_interval: 3600
@@ -48,7 +48,7 @@ plugins:
   - tag: cache_node
     type: cache
     args:
-      size: 20000000
+      size: 2048
       lazy_cache_ttl: 259200000
       dump_file: /etc/mosdns/cache_node.dump
       dump_interval: 36000
