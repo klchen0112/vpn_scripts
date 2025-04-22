@@ -3,49 +3,86 @@
 
   inputs = {
     utils.url = "github:numtide/flake-utils";
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    devshell.url = "github:numtide/devshell";
+
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    utils,
-    ...
-  }:
-    utils.lib.eachDefaultSystem (system: let
-      pkgs = import nixpkgs {inherit system;};
-      pythonPackages = pkgs.python3Packages;
-    in {
-      devShells.default = pkgs.mkShell {
-        name = "python-venv";
-        venvDir = "./.venv";
-        buildInputs = [
-          # A Python interpreter including the 'venv' module is required to bootstrap
-          # the environment.
-          pythonPackages.python
-
-          # This executes some shell code to initialize a venv in $venvDir before
-          # dropping into the shell
-          pythonPackages.venvShellHook
-
-          # Those are dependencies that we would like to use from nixpkgs, which will
-          # add them to PYTHONPATH and thus make them accessible from within the venv.
-          pythonPackages.numpy
-          pythonPackages.requests
-          pythonPackages.pyyaml
+  outputs =
+    inputs@{
+      self,
+      nixpkgs,
+      flake-parts,
+      treefmt-nix,
+      ...
+    }:
+    # https://flake.parts/module-arguments.html
+    flake-parts.lib.mkFlake { inherit inputs; } (
+      top@{
+        config,
+        withSystem,
+        moduleWithSystem,
+        ...
+      }:
+      {
+        imports = [
+          # Optional: use external flake logic, e.g.
+          # inputs.foo.flakeModules.default
+          inputs.treefmt-nix.flakeModule
+          inputs.devshell.flakeModule
         ];
+        flake = {
+          # Put your original flake attributes here.
+        };
+        systems = [
+          # systems for which you want to build the `perSystem` attributes
+          "x86_64-linux"
+          "aarch64-darwin"
+          # ...
+        ];
+        perSystem =
+          { config, pkgs, ... }:
+          {
+            devshells.default =
+              let
+                pyPkgs =
+                  pythonPackages: with pythonPackages; [
+                    pandas
+                    matplotlib
+                    numpy
+                    plotly
+                    seaborn
+                  ];
+              in
+              {
 
-        # Run this command, only after creating the virtual environment
-        postVenvCreation = ''
-          unset SOURCE_DATE_EPOCH
-          pip install -r requirements.txt
-        '';
+                packages = [
+                  pkgs.sing-box
+                  pkgs.mosdns
+                  (pkgs.python3.withPackages pyPkgs)
+                ];
+              };
+            treefmt = {
+              # projectRootFile = "LICENSE.md";
+              programs.nixfmt.enable = pkgs.lib.meta.availableOn pkgs.stdenv.buildPlatform pkgs.nixfmt-rfc-style.compiler;
+              programs.nixfmt.package = pkgs.nixfmt-rfc-style;
+              programs.shellcheck.enable = true;
+              programs.deno.enable = true;
+              programs.ruff.check = true;
+              programs.ruff.format = true;
+              settings.formatter.shellcheck.options = [
+                "-s"
+                "bash"
+              ];
 
-        # Now we can execute any commands within the virtual environment.
-        # This is optional and can be left out to run pip manually.
-        postShellHook = ''
-          # allow pip to install wheels
-          unset SOURCE_DATE_EPOCH
-        '';
-      };
-    });
+              settings.formatter.ruff-check.priority = 1;
+              settings.formatter.ruff-format.priority = 2;
+            };
+          };
+      }
+    );
 }
