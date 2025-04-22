@@ -1,9 +1,5 @@
 clash_to_sing_box/mixed.yaml
 
-# Devenv
-.devenv*
-devenv.local.nix
-
 # direnv
 .direnv
 
