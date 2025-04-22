@@ -6,3 +6,4 @@ clash_to_sing_box/mixed.yaml
 # pre-commit
 .pre-commit-config.yaml
 
+.venv

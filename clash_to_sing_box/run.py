@@ -32,7 +32,7 @@ parser.add_argument(
 parser.add_argument(
     "--platform", type=str, choices=["linux", "darwin", "windows", "openwrt"]
 )
-parser.add_argument("--fakeip", type=bool, default=False)
+parser.add_argument("--fakeip",action="store_true")
 args = parser.parse_args()
 
 
@@ -375,6 +375,10 @@ rules = {
         "clash_direct": {"clash_mode": "Direct", "outbound": "🎯 Direct"},
         "LOCAL_DOMAIN": {
             "inline": ["localdomain"],
+            "outbound": "🎯 Direct",
+        },
+        "process": {
+            "inline": ["process"],
             "outbound": "🎯 Direct",
         },
         "direct": {"type": "direct"},
