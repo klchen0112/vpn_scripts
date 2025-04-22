@@ -1,17 +1,17 @@
 {
-    "version": 1,
-    "rules": [
-        {
-            "domain_suffix": [
-                "open.ga",
-                "the-best-airport.com"
-            ]
-        },
-        {
-            "domain": [
-                "open.ga",
-                "the-best-airport.com"
-            ]
-        }
-    ]
+  "version": 1,
+  "rules": [
+    {
+      "domain_suffix": [
+        "open.ga",
+        "the-best-airport.com"
+      ]
+    },
+    {
+      "domain": [
+        "open.ga",
+        "the-best-airport.com"
+      ]
+    }
+  ]
 }

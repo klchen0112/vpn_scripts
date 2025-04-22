@@ -1,201 +1,201 @@
 log:
-    level: info
-    # file: "/etc/mosdns/mosdns.log"
+  level: info
+  # file: "/etc/mosdns/mosdns.log"
 
 api:
-    http: "0.0.0.0:5334"
+  http: "0.0.0.0:5334"
 
 include: ["/etc/mosdns/dns.yaml"]
 
 plugins:
-    # 国内域名
-    - tag: geosite_cn
-      type: domain_set
-      args:
-          files:
-              - "/etc/mosdns/rules/geosite_cn.txt"
-              - "/etc/mosdns/rules/force-cn.txt"
-              - "/etc/mosdns/rules/geosite_apple-cn.txt"
-              - "/etc/mosdns/rules/geosite_google-cn.txt"
-              - "/etc/mosdns/rules/geosite_category-games@cn.txt"
-              - "/etc/mosdns/rules/geosite_tracker.txt"
-    - tag: geoip_cf
-      type: ip_set
-      args:
-          files:
-              - "/etc/mosdns/rules/geoip_cloudflare.txt"
-    # 国内 IP
-    - tag: geoip_cn
-      type: ip_set
-      args:
-          files:
-              - "/etc/mosdns/rules/geoip_cn.txt"
+  # 国内域名
+  - tag: geosite_cn
+    type: domain_set
+    args:
+      files:
+        - "/etc/mosdns/rules/geosite_cn.txt"
+        - "/etc/mosdns/rules/force-cn.txt"
+        - "/etc/mosdns/rules/geosite_apple-cn.txt"
+        - "/etc/mosdns/rules/geosite_google-cn.txt"
+        - "/etc/mosdns/rules/geosite_category-games@cn.txt"
+        - "/etc/mosdns/rules/geosite_tracker.txt"
+  - tag: geoip_cf
+    type: ip_set
+    args:
+      files:
+        - "/etc/mosdns/rules/geoip_cloudflare.txt"
+  # 国内 IP
+  - tag: geoip_cn
+    type: ip_set
+    args:
+      files:
+        - "/etc/mosdns/rules/geoip_cn.txt"
 
-    - tag: fakeip_list
-      type: ip_set
-      args:
-          ips: # 可以是 IP 或 CIDR。
-              - "28.0.0.0/8"
-              - "f2b0::/18"
-    # 手动指定hosts
-    - tag: hosts
-      type: hosts
-      args:
-          files:
-              - "/etc/mosdns/rules/hosts.txt"
+  - tag: fakeip_list
+    type: ip_set
+    args:
+      ips: # 可以是 IP 或 CIDR。
+        - "28.0.0.0/8"
+        - "f2b0::/18"
+  # 手动指定hosts
+  - tag: hosts
+    type: hosts
+    args:
+      files:
+        - "/etc/mosdns/rules/hosts.txt"
 
-    - tag: local_ptr
-      type: domain_set
-      args:
-          files:
-              - "/etc/mosdns/rules/local-ptr.txt"
+  - tag: local_ptr
+    type: domain_set
+    args:
+      files:
+        - "/etc/mosdns/rules/local-ptr.txt"
 
-    # 国内处理
+  # 国内处理
 
-    # ECS
-    - tag: ecs_cn
-      type: "ecs_handler"
-      args:
-          forward: false # 是否转发来自下游的 ecs
-          # 替换自己所在IP
-          preset: 123.116.100.114 # 发送预设 ecs
-          send: false # 是否发送 ecs
-          mask4: 24 # ipv4 掩码。默认 24 | 12
-          mask6: 48 # ipv6 掩码。默认 48 | 32
+  # ECS
+  - tag: ecs_cn
+    type: "ecs_handler"
+    args:
+      forward: false # 是否转发来自下游的 ecs
+      # 替换自己所在IP
+      preset: 123.116.100.114 # 发送预设 ecs
+      send: false # 是否发送 ecs
+      mask4: 24 # ipv4 掩码。默认 24 | 12
+      mask6: 48 # ipv6 掩码。默认 48 | 32
 
-    - tag: cache_cn
-      type: cache
-      args:
-          size: 4096
-          lazy_cache_ttl: 86400
-          dump_file: /etc/mosdns/cache_local.dump
-          dump_interval: 3600
+  - tag: cache_cn
+    type: cache
+    args:
+      size: 4096
+      lazy_cache_ttl: 86400
+      dump_file: /etc/mosdns/cache_local.dump
+      dump_interval: 3600
 
-    # 查询国内域名
-    # 返回非国内IP则 drop_resp
-    - tag: query_cn_ip
-      type: sequence
-      args:
-          - matches:
-                - qname $geosite_cn
-            exec: $cache_cn
-          - matches: has_resp
-            exec: accept
-          - exec: $local
-          - exec: $ecs_cn
-          # 防止运营商污染
-          - matches:
-                - "!resp_ip $geoip_cn"
-                - "!resp_ip $geoip_cf"
-            exec: $ali
+  # 查询国内域名
+  # 返回非国内IP则 drop_resp
+  - tag: query_cn_ip
+    type: sequence
+    args:
+      - matches:
+          - qname $geosite_cn
+        exec: $cache_cn
+      - matches: has_resp
+        exec: accept
+      - exec: $local
+      - exec: $ecs_cn
+      # 防止运营商污染
+      - matches:
+          - "!resp_ip $geoip_cn"
+          - "!resp_ip $geoip_cf"
+        exec: $ali
 
-    - tag: no_ecs
-      type: "ecs_handler"
-      args:
-          forward: false # 是否转发来自下游的 ecs
-          preset: "" # 发送预设 ecs
-          send: false # 是否发送 ecs
-          mask4: 24
-          mask6: 48
+  - tag: no_ecs
+    type: "ecs_handler"
+    args:
+      forward: false # 是否转发来自下游的 ecs
+      preset: "" # 发送预设 ecs
+      send: false # 是否发送 ecs
+      mask4: 24
+      mask6: 48
 
-    - tag: forward_remote
-      type: fallback
-      args:
-          primary: cloudflare # 主dns
-          secondary: google # 备用dns
-          threshold: 500
-          always_standby: true
+  - tag: forward_remote
+    type: fallback
+    args:
+      primary: cloudflare # 主dns
+      secondary: google # 备用dns
+      threshold: 500
+      always_standby: true
 
-    - tag: query_remote
-      type: sequence
-      args:
-          - exec: $no_ecs
-          - exec: $forward_remote
+  - tag: query_remote
+    type: sequence
+    args:
+      - exec: $no_ecs
+      - exec: $forward_remote
 
-    # 查询国外域名 返回国内ip
-    # 返回国内 ip 调用国内查询
+  # 查询国外域名 返回国内ip
+  # 返回国内 ip 调用国内查询
 
-    - tag: forward_fakeip
-      type: fallback
-      args:
-          primary: fakeip # 主dns
-          secondary: fakeip # 备用dns
-          threshold: 500
-          always_standby: true
+  - tag: forward_fakeip
+    type: fallback
+    args:
+      primary: fakeip # 主dns
+      secondary: fakeip # 备用dns
+      threshold: 500
+      always_standby: true
 
-    - tag: get_fakeip
-      type: sequence
-      args:
-          - exec: drop_resp #丢弃用于标记的blackhole ip
-          - exec: $forward_fakeip
+  - tag: get_fakeip
+    type: sequence
+    args:
+      - exec: drop_resp #丢弃用于标记的blackhole ip
+      - exec: $forward_fakeip
 
-    - tag: query_no_cn_ip
-      type: sequence
-      args:
-          - exec: $query_remote
+  - tag: query_no_cn_ip
+    type: sequence
+    args:
+      - exec: $query_remote
 
-    - tag: query_is_reject_domain
-      type: sequence
-      args:
-          - matches:
-                - qtype 12
-                - qname $local_ptr
-            exec: reject 3
-          - matches: qtype 65
-            exec: reject 3
+  - tag: query_is_reject_domain
+    type: sequence
+    args:
+      - matches:
+          - qtype 12
+          - qname $local_ptr
+        exec: reject 3
+      - matches: qtype 65
+        exec: reject 3
 
-    # 主要的运行逻辑插件
-    # sequence 插件中调用的插件 tag 必须在 sequence 前定义，
-    # 否则 sequence 找不到对应插件。
-    - tag: main_sequence
-      type: sequence
-      args:
-          - exec: $hosts
-          - matches: has_resp
-            exec: accept
-          - exec: $query_cn_ip
-          - matches: "resp_ip $geoip_cn"
-            exec: accept
-          - matches: "resp_ip $geoip_cf"
-            exec: accept
-          - exec: $get_fakeip
-          - matches: has_resp
-            exec: accept
+  # 主要的运行逻辑插件
+  # sequence 插件中调用的插件 tag 必须在 sequence 前定义，
+  # 否则 sequence 找不到对应插件。
+  - tag: main_sequence
+    type: sequence
+    args:
+      - exec: $hosts
+      - matches: has_resp
+        exec: accept
+      - exec: $query_cn_ip
+      - matches: "resp_ip $geoip_cn"
+        exec: accept
+      - matches: "resp_ip $geoip_cf"
+        exec: accept
+      - exec: $get_fakeip
+      - matches: has_resp
+        exec: accept
 
-    - tag: sing_sequence
-      type: sequence
-      args:
-          - exec: $hosts
-          - matches: has_resp
-            exec: accept
-          - exec: $query_cn_ip
-          - matches: has_resp
-            exec: accept
-          - exec: $query_no_cn_ip
-          - matches: has_resp
-            exec: accept
-    - tag: node_sequence
-      type: sequence
-      args:
-          - exec: $query_cn_ip
-          - matches: has_resp
-            exec: accept
-    # 启动 udp 服务器
-    - tag: node_server
-      type: udp_server
-      args:
-          entry: node_sequence
-          listen: ":5336"
+  - tag: sing_sequence
+    type: sequence
+    args:
+      - exec: $hosts
+      - matches: has_resp
+        exec: accept
+      - exec: $query_cn_ip
+      - matches: has_resp
+        exec: accept
+      - exec: $query_no_cn_ip
+      - matches: has_resp
+        exec: accept
+  - tag: node_sequence
+    type: sequence
+    args:
+      - exec: $query_cn_ip
+      - matches: has_resp
+        exec: accept
+  # 启动 udp 服务器
+  - tag: node_server
+    type: udp_server
+    args:
+      entry: node_sequence
+      listen: ":5336"
 
-    # 启动 udp 服务器
-    - tag: udp_server
-      type: udp_server
-      args:
-          entry: sing_sequence
-          listen: ":5335"
+  # 启动 udp 服务器
+  - tag: udp_server
+    type: udp_server
+    args:
+      entry: sing_sequence
+      listen: ":5335"
 
-    - tag: udp_server_53
-      type: udp_server
-      args:
-          entry: main_sequence
-          listen: ":53"
+  - tag: udp_server_53
+    type: udp_server
+    args:
+      entry: main_sequence
+      listen: ":53"

@@ -32,7 +32,7 @@ parser.add_argument(
 parser.add_argument(
     "--platform", type=str, choices=["linux", "darwin", "windows", "openwrt"]
 )
-parser.add_argument("--fakeip",action="store_true")
+parser.add_argument("--fakeip", action="store_true")
 args = parser.parse_args()
 
 

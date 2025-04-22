@@ -21,18 +21,17 @@ proxy-providers:
 
 # 规则订阅
 #rule-providers:
-  # 秋风广告拦截规则
-  # https://awavenue.top
-  # 由于 Anti-AD 误杀率高，本项目已在 1.11-241024 版本更换秋风广告规则
-  #AWAvenue-Ads:
-  #  type: http
-  #  behavior: domain
-  #  format: yaml
-  #  # path可为空(仅限clash.meta 1.15.0以上版本)
-  #  path: ./rule_provider/AWAvenue-Ads.yaml
-  #  url: "https://ghfast.top/https://raw.githubusercontent.com/TG-Twilight/AWAvenue-Ads-Rule/refs/heads/main/Filters/AWAvenue-Ads-Rule-Clash-classical.yaml"
-  #  interval: 600
-
+# 秋风广告拦截规则
+# https://awavenue.top
+# 由于 Anti-AD 误杀率高，本项目已在 1.11-241024 版本更换秋风广告规则
+#AWAvenue-Ads:
+#  type: http
+#  behavior: domain
+#  format: yaml
+#  # path可为空(仅限clash.meta 1.15.0以上版本)
+#  path: ./rule_provider/AWAvenue-Ads.yaml
+#  url: "https://ghfast.top/https://raw.githubusercontent.com/TG-Twilight/AWAvenue-Ads-Rule/refs/heads/main/Filters/AWAvenue-Ads-Rule-Clash-classical.yaml"
+#  interval: 600
 
 mode: rule
 # ipv6 支持
@@ -112,7 +111,6 @@ tun:
   auto-route: true
   mtu: 9000
 
-
 dns:
   enable: true # DNS开关(false/true)
   cache-algorithm: arc
@@ -127,7 +125,7 @@ dns:
     - 223.5.5.5
   fake-ip-filter-mode: blacklist
   fake-ip-filter:
-    - '*.lan'
+    - "*.lan"
     - "geosite:cn"
   proxy-server-nameserver:
     - https://doh.pub/dns-query
