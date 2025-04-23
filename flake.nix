@@ -51,11 +51,8 @@
               let
                 pyPkgs =
                   pythonPackages: with pythonPackages; [
-                    pandas
-                    matplotlib
-                    numpy
-                    plotly
-                    seaborn
+                    requests
+                    pyyaml
                   ];
               in
               {
