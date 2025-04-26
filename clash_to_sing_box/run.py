@@ -33,6 +33,7 @@ parser.add_argument(
     "--platform", type=str, choices=["linux", "darwin", "windows", "openwrt"]
 )
 parser.add_argument("--fakeip", action="store_true")
+parser.add_argument("--adblock", action="store_true")
 args = parser.parse_args()
 
 
@@ -202,9 +203,9 @@ GLOBAL_DETOUR = "✈️ Proxy"
 
 def get_rule_set_url(rule_type: str, name: str):
     if rule_type == "geosite":
-        url = f"https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-{name}.srs"
+        url = f" https://gh-proxy.com/raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/sing/geo/geosite/{name}.srs"
     elif rule_type == "geoip":
-        url = f"https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-{name}.srs"
+        url = f"https://gh-proxy.com/raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/sing/geo/geosite/{name}.srs"
     elif rule_type == "inline":
         return {
             "tag": f"{rule_type}-{name}",
@@ -217,33 +218,36 @@ def get_rule_set_url(rule_type: str, name: str):
         "tag": f"{rule_type}-{name}",
         "type": "remote",
         "url": url,
-        "download_detour": "节点选择",
+        "download_detour": "direct",
         "format": "binary",
     }
 
 
-def get_rule_set(rule_config):
+def get_rule_set(rule_config, adblock: bool = False):
     rule_sets = []
 
-    find = False
-    for key, value in rule_config.items():
+    for value in rule_config.values():
         if "geosite" in value:
             for name in value["geosite"]:
                 rule_sets.append(get_rule_set_url(rule_type="geosite", name=name))
-                if name == "geolocation-!cn":
-                    find = True
         if "geoip" in value:
             for name in value["geoip"]:
                 rule_sets.append(get_rule_set_url(rule_type="geoip", name=name))
         if "inline" in value:
             for name in value["inline"]:
                 rule_sets.append(get_rule_set_url(rule_type="inline", name=name))
-    if not find:
-        rule_sets.append(get_rule_set_url(rule_type="geosite", name="geolocation-!cn"))
+    if adblock:
+        rule_sets.append({
+                "tag": "adblock",
+                "type": "remote",
+                "url": "https://gh-proxy.com/raw.githubusercontent.com/REIJI007/AdBlock_Rule_For_Sing-box/main/adblock_reject.json",
+                "download_detour": "direct",
+                "format": "json",
+            })
     return rule_sets
 
 
-def get_route_rules(rule_config, platform: str, use_fakeip):
+def get_route_rules(rule_config, platform: str, use_fakeip: bool,adblock:bool = False):
     route_rules = []
     if platform == "openwrt":
         route_rules.append({"inbound": "dns-in", "action": "sniff"})
@@ -251,6 +255,11 @@ def get_route_rules(rule_config, platform: str, use_fakeip):
         route_rules.append({"action": "sniff"})
     route_rules.append({"protocol": "dns", "action": "hijack-dns"})
     rule_types = ("geoip", "geosite", "inline")
+    if adblock:
+        route_rules.append({
+            "rule_set": "adblock",
+            "action": "reject"
+        })
     for key, value in rule_config.items():
         if key == GLOBAL_DETOUR:
             continue
@@ -1013,12 +1022,13 @@ if __name__ == "__main__":
             "auto_detect_interface": True,  # 如果您是Linux、Windows 和 macOS用户，请将此条注释撤销，使 final 其生效，以免造成问题（上一行记得加,）
             "final": GLOBAL_DETOUR,
             "rule_set": get_rule_set(
-                (rules[args.config]),
+                (rules[args.config]),adblock=args.adblock
             ),
             "rules": get_route_rules(
                 rule_config=(rules[args.config]),
                 platform=args.platform,
                 use_fakeip=args.fakeip,
+                adblock=args.adblock,
             ),
         },
     }
