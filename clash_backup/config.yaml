@@ -1,26 +1,27 @@
 # 订阅链接
 # 对于订阅来说，path 为选填项，但建议启用
 # 本地配置可以只填 path
+
+p: &p
+  type: http
+  interval: 3600
 proxy-providers:
   AT1:
     <<: *p
-    url: "https://ktmcloud.net/api/v1/client/subscribe?token=510aba5bbf5f34b52885f0b51ba97a01"
+    url: ""
     override:
-      additional-prefix: "[KTM]"
+      additional-prefix: "[八戒]"
 
   AT2:
     <<: *p
-    url: "https://mojie.co/api/v1/client/subscribe?token=3061ed07a35910511fac06975d7f1d2a"
-    override:
-      additional-prefix: "[魔戒]"
-  AT3:
-    <<: *p
-    url: "https://dash.pqjc.site/api/v1/client/subscribe?token=0955cfbdea42911a644ee91d6abb5652"
+    url: ""
     override:
       additional-prefix: "[赔钱]"
-
-# 规则订阅
-#rule-providers:
+  AT3:
+    <<: *p
+    url: ""
+    override:
+    rule-providers:
 # 秋风广告拦截规则
 # https://awavenue.top
 # 由于 Anti-AD 误杀率高，本项目已在 1.11-241024 版本更换秋风广告规则
@@ -41,6 +42,10 @@ log-level: info
 allow-lan: true
 # socks5/http 端口
 mixed-port: 7890
+# tproxy
+tproxy-port: 7895
+
+redir-port: 7899
 
 # Meta 内核特性 https://wiki.metacubex.one/config/general
 # 统一延迟
@@ -53,7 +58,6 @@ tcp-concurrent: true
 external-controller: "0.0.0.0:9090"
 
 geodata-mode: true #【Meta专属】使用geoip.dat数据库(默认：false使用mmdb数据库)
-find-process-mode: off
 geo-auto-update: false
 
 geox-url:
@@ -102,7 +106,7 @@ sniffer:
 
 # tun 模式
 tun:
-  enable: true
+  enable: false
   stack: system
   dns-hijack:
     - any:53
@@ -117,30 +121,21 @@ dns:
   use-hosts: true
   use-system-hosts: true
   prefer-h3: true
-  listen: 0.0.0.0:7874 # DNS监听地址
+  listen: 0.0.0.0:6666 # DNS监听地址
   ipv6: true # IP6解析开关；如果为false，将返回ip6结果为空
   enhanced-mode: fake-ip # DNS模式(redir-host/fake-ip)
-  fake-ip-range: 198.18.0.1/16
+  fake-ip-range: 28.0.0.0/8
   default-nameserver:
-    - 223.5.5.5
+    - 127.0.0.1:5335
   fake-ip-filter-mode: blacklist
   fake-ip-filter:
     - "*.lan"
     - "geosite:cn"
   proxy-server-nameserver:
-    - https://doh.pub/dns-query
+    - 127.0.0.1:5336
   nameserver: # 默认DNS服务器，支持udp/tcp/dot/doh/doq
-    - "https://1.12.12.12/dns-query"
-    - "https://223.5.5.5/dns-query"
-  # Lookup domains via specific nameservers
-  nameserver-policy:
-    "geosite:cn,private":
-      - "https://223.5.5.5/dns-query"
-      - "https://1.12.12.12/dns-query"
-    "+.cc98.org,+.zju.edu.cn":
-      - "10.10.0.21"
-      - "10.10.2.21"
-      - "10.66.10.10"
+    - 127.0.0.1:5335
+
 
 proxy-groups:
   - name: Proxy
@@ -149,23 +144,23 @@ proxy-groups:
       - Automatic
       - 节点选择
       - 外服游戏
-      - 香港
-      - 日本
-      - 新加坡
-      - 台湾
-      - 美国
-      - 韩国
-      - 英国
-      - 法国
-      - 俄罗斯
-      - 德国
-      - 澳大利亚
-      - 菲律宾
-      - 土耳其
-      - 阿根廷
-      - 乌克兰
-      - 巴西
-      - 印度
+      - 🇭🇰香港
+      - 🇺🇸美国
+      - 🇹🇼台湾
+      - 🇯🇵日本
+      - 🇰🇷韩国
+      - 🇸🇬新加坡
+      - 🇫🇷法国
+      - 🇬🇧英国
+      - 🇷🇺俄罗斯
+      - 🇩🇪德国
+      - 🇦🇺澳大利亚
+      - 🇵🇭菲律宾
+      - 🇹🇷土耳其
+      - 🇦🇷阿根廷
+      - 🇺🇦乌克兰
+      - 🇧🇷巴西
+      - 🇮🇳印度
       # - 巴基斯坦
       # - 泰国
       - DIRECT
@@ -178,35 +173,21 @@ proxy-groups:
 
   - name: 外服游戏
     type: select
-    proxies:
-      - 香港
-      - 日本
+    use:
+      - AT1
+      - AT2
+      - AT3
+    filter: "IPEL"
   - name: "Automatic"
     type: url-test
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
     interval: 300 # 测ping时间(秒)
     lazy: true
-    proxies:
-      - 香港
-      - 日本
-      - 新加坡
-      - 台湾
-      - 美国
-      - 韩国
-      - 英国
-      - 法国
-      - 俄罗斯
-      - 德国
-      - 澳大利亚
-      - 菲律宾
-      - 土耳其
-      - 阿根廷
-      - 乌克兰
-      - 巴西
-      - 印度
-      #- 巴基斯坦
-      # - 泰国
+    use:
+      - AT1
+      - AT2
+      - AT3
   - name: OneDrive
     type: select
     proxies:
@@ -226,13 +207,13 @@ proxy-groups:
     type: select # 手动代理组
     proxies:
       - DIRECT
-      - 香港
-      - 台湾
+      - 🇭🇰香港
+      - 🇹🇼台湾
   - name: B站港澳台
     type: select # 手动代理组
     proxies:
-      - 台湾
-      - 香港
+      - 🇹🇼台湾
+      - 🇭🇰香港
       - DIRECT
   - name: 动画疯
     type: select
@@ -241,7 +222,7 @@ proxy-groups:
     interval: 300 # 测ping时间(秒)
     lazy: true
     proxies:
-      - 台湾
+      - 🇹🇼台湾
       - DIRECT
   - name: Streaming
     type: select
@@ -275,31 +256,13 @@ proxy-groups:
 
   - name: OpenAI
     type: select # 手动代理组
-    proxies:
-      - 美国
-      - 节点选择
-      - Automatic
-      - 外服游戏
-      - 香港
-      - 日本
-      - 新加坡
-      - 台湾
-      - 韩国
-      - 英国
-      - 法国
-      - 俄罗斯
-      - 德国
-      - 澳大利亚
-      - 菲律宾
-      - 土耳其
-      - 阿根廷
-      - 乌克兰
-      - 巴西
-      - 印度
-      # - 巴基斯坦
-      # - 泰国
+    use:
+      - AT1
+      - AT2
+      - AT3
+    filter: "GPT"
 
-  - name: 香港
+  - name: 🇭🇰香港
     type: load-balance
     strategy: consistent-hashing
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
@@ -311,7 +274,7 @@ proxy-groups:
       - AT2
       - AT3
     filter: "🇭🇰|香港|港|hongkong|Hong Kong"
-  - name: 日本
+  - name: 🇯🇵日本
     type: load-balance
     strategy: consistent-hashing
     use:
@@ -323,7 +286,7 @@ proxy-groups:
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
     interval: 300 # 测ping时间(秒)
     lazy: true
-  - name: 新加坡
+  - name: 🇸🇬新加坡
     type: load-balance
     strategy: consistent-hashing
     use:
@@ -335,7 +298,7 @@ proxy-groups:
     interval: 300 # 测ping时间(秒)
     lazy: true
     filter: "🇸🇬|新加坡|SG|Singapore"
-  - name: 台湾
+  - name: 🇹🇼台湾
     type: load-balance
     strategy: consistent-hashing
     use:
@@ -347,7 +310,7 @@ proxy-groups:
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
     interval: 300 # 测ping时间(秒)
     lazy: true
-  - name: 🇺🇸 美国
+  - name: 🇺🇸美国
     type: load-balance
     strategy: consistent-hashing
     use:
@@ -359,7 +322,7 @@ proxy-groups:
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
     interval: 300 # 测ping时间(秒)
     lazy: true
-  - name: 🇰🇷 韩国
+  - name: 🇰🇷韩国
     type: load-balance
     strategy: consistent-hashing
     use:
@@ -371,7 +334,7 @@ proxy-groups:
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
     interval: 300 # 测ping时间(秒)
     lazy: true
-  - name: 🇬🇧 英国
+  - name: 🇬🇧英国
     type: load-balance
     strategy: consistent-hashing
     use:
@@ -383,120 +346,120 @@ proxy-groups:
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
     interval: 300 # 测ping时间(秒)
     lazy: true
-  - name: 俄罗斯
+  - name: 🇷🇺俄罗斯
     type: load-balance
     strategy: consistent-hashing
     use:
       - AT1
       - AT2
       - AT3
-    filter: "俄罗斯"
+    filter: "俄罗斯|🇷🇺"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
     interval: 300 # 测ping时间(秒)
     lazy: true
-  - name: 法国
+  - name: 🇫🇷法国
     type: load-balance
     strategy: consistent-hashing
     use:
       - AT1
       - AT2
       - AT3
-    filter: "法国"
+    filter: "法国|🇫🇷"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
     interval: 300 # 测ping时间(秒)
     lazy: true
-  - name: 德国
+  - name: 🇩🇪德国
     type: load-balance
     strategy: consistent-hashing
     use:
       - AT1
       - AT2
       - AT3
-    filter: "德国"
+    filter: "德国|🇩🇪"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
     interval: 300 # 测ping时间(秒)
     lazy: true
-  - name: 澳大利亚
+  - name: 🇦🇺澳大利亚
     type: load-balance
     strategy: consistent-hashing
     use:
       - AT1
       - AT2
       - AT3
-    filter: "澳大利亚"
+    filter: "澳大利亚|🇦🇺"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
     interval: 300 # 测ping时间(秒)
     lazy: true
-  - name: 菲律宾
+  - name: 🇵🇭菲律宾
     type: load-balance
     strategy: consistent-hashing
     use:
       - AT1
       - AT2
       - AT3
-    filter: "菲律宾"
+    filter: "菲律宾|🇵🇭"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
     interval: 300 # 测ping时间(秒)
     lazy: true
-  - name: 土耳其
+  - name: 🇹🇷土耳其
     type: load-balance
     strategy: consistent-hashing
     use:
       - AT1
       - AT2
       - AT3
-    filter: "土耳其"
+    filter: "土耳其|🇹🇷"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
     interval: 300 # 测ping时间(秒)
     lazy: true
-  - name: 阿根廷
+  - name: 🇦🇷阿根廷
     type: load-balance
     strategy: consistent-hashing
     use:
       - AT1
       - AT2
       - AT3
-    filter: "阿根廷"
+    filter: "阿根廷|🇦🇷"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
     interval: 300 # 测ping时间(秒)
     lazy: true
-  - name: 乌克兰
+  - name: 🇺🇦乌克兰
     type: select
     use:
       - AT1
       - AT2
       - AT3
-    filter: "乌克兰"
+    filter: "乌克兰|🇺🇦"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
     interval: 300 # 测ping时间(秒)
     lazy: true
-  - name: 巴西
+  - name: 🇧🇷巴西
     type: load-balance
     strategy: consistent-hashing
     use:
       - AT1
       - AT2
       - AT3
-    filter: "巴西"
+    filter: "巴西|🇧🇷"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
     intBRval: 300 # 测ping时间(秒)
-  - name: 印度
+  - name: 🇮🇳印度
     type: load-balance
     strategy: consistent-hashing
     use:
       - AT1
       - AT2
       - AT3
-    filter: "印度"
+    filter: "印度|🇮🇳"
     tolerance: 50 # 容差值：节点差值低于设定值时，不自动切换
     url: "http://cp.cloudflare.com/generate_204" # 用来测ping的地址
     interval: 300 # 测ping时间(秒)
@@ -731,22 +694,23 @@ rules:
   # GEOIP规则
   - GEOIP,CN,DIRECT
   - GEOIP,TELEGRAM,Social
-  - GEOIP,HK,香港
-  - GEOIP,US,美国
-  - GEOIP,TW,台湾
-  - GEOIP,JP,日本
-  - GEOIP,KR,韩国
-  - GEOIP,SG,新加坡
-  - GEOIP,FR,法国
-  # - GEOIP,UK,英国
-  - GEOIP,DE,德国
-  - GEOIP,AU,澳大利亚
-  - GEOIP,PH,菲律宾
-  - GEOIP,TR,土耳其
-  - GEOIP,AR,阿根廷
-  - GEOIP,UA,乌克兰
-  - GEOIP,BR,巴西
-  - GEOIP,IN,印度
+  - GEOIP,HK,🇭🇰香港
+  - GEOIP,US,🇺🇸美国
+  - GEOIP,TW,🇹🇼台湾
+  - GEOIP,JP,🇯🇵日本
+  - GEOIP,KR,🇰🇷韩国
+  - GEOIP,SG,🇸🇬新加坡
+  - GEOIP,FR,🇫🇷法国
+  # - GEOIP,UK,🇬🇧英国
+  - GEOIP,RU,🇷🇺俄罗斯
+  - GEOIP,DE,🇩🇪德国
+  - GEOIP,AU,🇦🇺澳大利亚
+  - GEOIP,PH,🇵🇭菲律宾
+  - GEOIP,TR,🇹🇷土耳其
+  - GEOIP,AR,🇦🇷阿根廷
+  - GEOIP,UA,🇺🇦乌克兰
+  - GEOIP,BR,🇧🇷巴西
+  - GEOIP,IN,🇮🇳印度
 
   # 兜底规则
   - MATCH,漏网之鱼
