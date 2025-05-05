@@ -49,4 +49,5 @@ service_triggers() {
 		procd_add_interface_trigger "interface.*.up" $iface /etc/init.d/$NAME restart
 	done
 	procd_close_trigger
-	pro
+	procd_add_reload_trigger "$NAME"
+}
