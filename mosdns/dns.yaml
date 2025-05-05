@@ -49,7 +49,6 @@ plugins:
           enable_pipeline: true
           enable_http3: true
 
-
   - tag: local
     type: forward
     args:
@@ -58,14 +57,12 @@ plugins:
         - addr: "udp://211.140.188.188"
         - addr: "udp://211.140.13.188"
 
-
   - tag: fakeip
     type: forward
     args:
       concurrent: 1
       upstreams:
         - addr: "udp://127.0.0.1:6666"
-
 
   # server 失败
   - tag: reject_2
