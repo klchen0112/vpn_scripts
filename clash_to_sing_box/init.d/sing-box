@@ -4,9 +4,9 @@ START=99
 USE_PROCD=1
 
 #####  ONLY CHANGE THIS BLOCK  ######
-PROG=/usr/bin/sing-box 
-RES_DIR=/etc/sing-box/ 
-CONF=./config.json   
+PROG=/usr/bin/sing-box
+RES_DIR=/etc/sing-box/
+CONF=./config.json
 #####  ONLY CHANGE THIS BLOCK  ######
 
 start_service() {
@@ -20,23 +20,13 @@ start_service() {
     procd_set_param respawn "${respawn_threshold:-3600}" "${respawn_timeout:-5}" "${respawn_retry:-5}"
     procd_close_instance
     ## 以下七行是nftables相关，使用iptables自行替换##
-    ip rule add fwmark 1 table 100
-    ip route add local 0.0.0.0/0 dev lo table 100
-    ip -6 rule add fwmark 1 table 106
-    ip -6 route add local ::/0 dev lo table 106
     nft -f /etc/sing-box/nftables-ip46.conf
-    nft add chain inet sing-box docker { type nat hook prerouting priority -100 \; }
-    nft add rule inet sing-box docker ip saddr != {172.17.0.0/16} return
     echo "sing-box is started!"
 }
 
 stop_service() {
     service_stop $PROG
     ## 以下五行是nftables相关，使用iptables自行替换##
-    ip rule del fwmark 1 table 100
-    ip route del local 0.0.0.0/0 dev lo table 100
-    ip -6 rule del fwmark 1 table 106
-    ip -6 route del local ::/0 dev lo table 106
     nft delete table inet sing-box
     echo "sing-box is stopped!"
 }
