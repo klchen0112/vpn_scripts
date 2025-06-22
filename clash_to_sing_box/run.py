@@ -20,6 +20,7 @@ parser.add_argument("--mixed", help="use mixed inbound", action="store_true")
 parser.add_argument("--lan", help="use lan mode", action="store_true")
 parser.add_argument("--docker", help="docker version", action="store_true")
 parser.add_argument("--dns_private", help="direct dns", type=str, default="local")
+parser.add_argument("--dns_resolver", help="direct dns", type=str, default="local")
 parser.add_argument(
     "--dns_direct", help="direct dns", type=str, default="h3://dns.alidns.com/dns-query"
 )
@@ -34,6 +35,7 @@ parser.add_argument(
 )
 parser.add_argument("--fakeip", action="store_true")
 parser.add_argument("--adblock", action="store_true")
+parser.add_argument("--tailscale", action="store_true")
 args = parser.parse_args()
 
 
@@ -65,6 +67,10 @@ def process_proxy(proxy):
         result["server_port"] = int(proxy["port"])
         result["method"] = proxy["cipher"]
         result["password"] = proxy["password"]
+        if "plugin" in proxy:
+            if proxy["plugin"] == "obfs":
+                result["plugin"] = "obfs-local"
+            # result["plugin-opts"] = proxy["plugin-opts"]
         return result
     elif proxy["type"] == "trojan":
         trojan_server_base = {
@@ -203,7 +209,7 @@ GLOBAL_DETOUR = "✈️ Proxy"
 
 def get_rule_set_url(rule_type: str, name: str):
     if rule_type == "geosite":
-        url = f" https://gh-proxy.com/raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/sing/geo/geosite/{name}.srs"
+        url = f"https://gh-proxy.com/raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/sing/geo/geosite/{name}.srs"
     elif rule_type == "geoip":
         url = f"https://gh-proxy.com/raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/sing/geo/geosite/{name}.srs"
     elif rule_type == "inline":
@@ -237,17 +243,21 @@ def get_rule_set(rule_config, adblock: bool = False):
             for name in value["inline"]:
                 rule_sets.append(get_rule_set_url(rule_type="inline", name=name))
     if adblock:
-        rule_sets.append({
+        rule_sets.append(
+            {
                 "tag": "adblock",
                 "type": "remote",
                 "url": "https://gh-proxy.com/raw.githubusercontent.com/REIJI007/AdBlock_Rule_For_Sing-box/main/adblock_reject.json",
                 "download_detour": "direct",
                 "format": "json",
-            })
+            }
+        )
     return rule_sets
 
 
-def get_route_rules(rule_config, platform: str, use_fakeip: bool,adblock:bool = False):
+def get_route_rules(
+    rule_config, platform: str, use_fakeip: bool, adblock: bool = False
+):
     route_rules = []
     if platform == "openwrt":
         route_rules.append({"inbound": "dns-in", "action": "sniff"})
@@ -256,10 +266,7 @@ def get_route_rules(rule_config, platform: str, use_fakeip: bool,adblock:bool = 
     route_rules.append({"protocol": "dns", "action": "hijack-dns"})
     rule_types = ("geoip", "geosite", "inline")
     if adblock:
-        route_rules.append({
-            "rule_set": "adblock",
-            "action": "reject"
-        })
+        route_rules.append({"rule_set": "adblock", "action": "reject"})
     for key, value in rule_config.items():
         if key == GLOBAL_DETOUR:
             continue
@@ -660,6 +667,17 @@ def get_inbounds(
         result.append(
             {"type": "direct", "tag": "dns-in", "listen": "::", "listen_port": 6666}
         )
+        result.append(
+            {"type": "tproxy", "tag": "tproxy-in", "listen": "::", "listen_port": 7985},
+        )
+        result.append(
+            {
+                "type": "redirect",
+                "tag": "redirect-in",
+                "listen": "::",
+                "listen_port": 7899,
+            }
+        )
     if use_mixed:
         result.append(
             {
@@ -699,7 +717,13 @@ def get_inbounds(
 
 
 def get_dns_configs(
-    dns_private, dns_direct, dns_remote, use_v6: bool, use_fakeip: bool, platform
+    dns_private,
+    dns_direct,
+    dns_remote,
+    dns_resolver,
+    use_v6: bool,
+    use_fakeip: bool,
+    platform,
 ):
     dns_config = {}
 
@@ -719,7 +743,7 @@ def get_dns_configs(
         },
         {
             "tag": "dns-resolver",
-            "address": "223.5.5.5",
+            "address": dns_resolver,
             "detour": "direct",
         },
         {
@@ -977,7 +1001,7 @@ if __name__ == "__main__":
             ]
         },
     ]
-    local_RULES["inline-proccess"] = [{"process_name": ["tailscale", "tailscaled"]}]
+    local_RULES["inline-process"] = [{"process_name": ["tailscale", "tailscaled"]}]
 
     result_json = {
         "log": LOG_SETTINGS,
@@ -999,6 +1023,7 @@ if __name__ == "__main__":
             dns_private=args.dns_private,
             dns_direct=args.dns_direct,
             dns_remote=args.dns_remote,
+            dns_resolver=args.dns_resolver,
             use_v6=args.use_v6,
             use_fakeip=args.fakeip,
             platform=args.platform,
@@ -1021,9 +1046,7 @@ if __name__ == "__main__":
         "route": {
             "auto_detect_interface": True,  # 如果您是Linux、Windows 和 macOS用户，请将此条注释撤销，使 final 其生效，以免造成问题（上一行记得加,）
             "final": GLOBAL_DETOUR,
-            "rule_set": get_rule_set(
-                (rules[args.config]),adblock=args.adblock
-            ),
+            "rule_set": get_rule_set((rules[args.config]), adblock=args.adblock),
             "rules": get_route_rules(
                 rule_config=(rules[args.config]),
                 platform=args.platform,
@@ -1032,6 +1055,19 @@ if __name__ == "__main__":
             ),
         },
     }
+    if args.tailscale:
+        result_json["endpoints"] = [
+            {
+                "type": "tailscale",
+                "tag": "ts-ep",
+                "ephemeral": False,
+                "exit_node": "",
+                "exit_node_allow_lan_access": False,
+                "advertise_routes": [],
+                "advertise_exit_node": False,
+                "udp_timeout": "5m",
+            }
+        ]
     with open(
         "result_{}{}{}{}{}{}.json".format(
             args.config,
