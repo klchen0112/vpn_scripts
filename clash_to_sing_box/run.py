@@ -22,13 +22,13 @@ parser.add_argument("--docker", help="docker version", action="store_true")
 parser.add_argument("--dns_private", help="direct dns", type=str, default="local")
 parser.add_argument("--dns_resolver", help="direct dns", type=str, default="local")
 parser.add_argument(
-    "--dns_direct", help="direct dns", type=str, default="h3://dns.alidns.com/dns-query"
+    "--dns_direct", help="direct dns", type=str, default="https://dns.pub/dns-query"
 )
 parser.add_argument(
     "--dns_remote",
     help="remote dns",
     type=str,
-    default="https://cloudflare-dns.com/dns-query",
+    default="https://dns.quad9.net/dns-query",
 )
 parser.add_argument(
     "--platform", type=str, choices=["linux", "darwin", "windows", "openwrt"]
@@ -1010,13 +1010,13 @@ if __name__ == "__main__":
                 "external_controller": (
                     "0.0.0.0:9090" if args.lan else "127.0.0.1:9090"
                 ),
-                "external_ui": "dashboard",
-                "default_mode": "Enhanced",
+                "external_ui": "ui",
+                "default_mode": "rule",
             },
             "cache_file": {
                 "enabled": True,
-                "store_fakeip": args.fakeip,
-                "store_rdrc": True,
+                # "store_fakeip": args.fakeip,
+                # "store_rdrc": True,
             },
         },
         "dns": get_dns_configs(
