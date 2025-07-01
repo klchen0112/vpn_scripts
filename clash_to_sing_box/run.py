@@ -862,7 +862,7 @@ def get_dns_configs(
     if use_fakeip:
         dns_config["fakeip"] = {
             "enabled": True,
-            "inet4_range": "198.18.0.0/15",
+            "inet4_range": "28.0.0.0/16",
             **({"inet6_range": "fc00::/18"} if use_v6 else {}),
         }
     return dns_config
@@ -1010,6 +1010,8 @@ if __name__ == "__main__":
                 "external_controller": (
                     "0.0.0.0:9090" if args.lan else "127.0.0.1:9090"
                 ),
+                "external_ui_download_url": "https://gh-proxy.com/github.com/Zephyruso/zashboard/releases/latest/download/dist.zip",
+                "external_ui_download_detour": "direct",
                 "external_ui": "ui",
                 "default_mode": "rule",
             },
